@@ -1,5 +1,7 @@
 # Como criar a credencial do Google (passo a passo em português)
 
+🇧🇷 Português · [🇺🇸 English](GOOGLE-SETUP.md)
+
 Leva uns 10 minutos e é feito **uma vez só**. No fim você terá um arquivo `client_secret.json`,
 que o FotoFaxina usa para pedir sua permissão de enviar fotos ao Google Fotos.
 

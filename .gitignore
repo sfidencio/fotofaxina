@@ -223,3 +223,6 @@ __marimo__/
 client_secret*.json
 token.json
 !packaging/fotofaxina.spec
+
+# modelo de IA gerado no build (packaging/build_model.py)
+models/

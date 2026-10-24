@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Faxina, o mascote do FotoFaxina: um faxineiro varrendo fotos bagunçadas -->
+  <defs>
+    <linearGradient id="macacao" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1fb5a6"/>
+      <stop offset="1" stop-color="#16867c"/>
+    </linearGradient>
+    <linearGradient id="bone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- sombra -->
+  <ellipse cx="256" cy="472" rx="190" ry="18" fill="#000" opacity="0.12"/>
+
+  <!-- fotos bagunçadas no chão -->
+  <g transform="translate(88 400) rotate(-14)">
+    <rect x="-34" y="-26" width="68" height="52" rx="6" fill="#fff" stroke="#cbd5e1" stroke-width="3"/>
+    <polygon points="-24,16 -6,-6 8,16" fill="#38bdf8"/>
+    <polygon points="0,16 14,-2 26,16" fill="#0ea5e9"/>
+    <circle cx="18" cy="-12" r="6" fill="#fbbf24"/>
+  </g>
+  <g transform="translate(150 438) rotate(10)">
+    <rect x="-30" y="-22" width="60" height="44" rx="6" fill="#fff" stroke="#cbd5e1" stroke-width="3"/>
+    <circle cx="-6" cy="0" r="9" fill="#f472b6"/>
+    <rect x="-20" y="10" width="28" height="6" rx="3" fill="#f9a8d4"/>
+  </g>
+
+  <!-- vassoura -->
+  <line x1="420" y1="120" x2="214" y2="404" stroke="#92400e" stroke-width="14" stroke-linecap="round"/>
+  <g transform="translate(204 420) rotate(36)">
+    <rect x="-34" y="-20" width="68" height="18" rx="6" fill="#b45309"/>
+    <path d="M -46 -4 L 46 -4 L 58 52 L -58 52 Z" fill="#facc15"/>
+    <g stroke="#ca8a04" stroke-width="4" stroke-linecap="round">
+      <line x1="-34" y1="4" x2="-44" y2="48"/>
+      <line x1="-14" y1="4" x2="-18" y2="48"/>
+      <line x1="6" y1="4" x2="8" y2="48"/>
+      <line x1="26" y1="4" x2="34" y2="48"/>
+    </g>
+  </g>
+
+  <!-- pernas e sapatos -->
+  <rect x="236" y="384" width="34" height="66" rx="12" fill="#16867c"/>
+  <rect x="292" y="384" width="34" height="66" rx="12" fill="#16867c"/>
+  <ellipse cx="248" cy="456" rx="30" ry="14" fill="#334155"/>
+  <ellipse cx="316" cy="456" rx="30" ry="14" fill="#334155"/>
+
+  <!-- corpo: camiseta + macacão -->
+  <rect x="214" y="250" width="138" height="150" rx="48" fill="#fef3c7" stroke="#e7d9a8" stroke-width="3"/>
+  <path d="M 222 300 Q 222 284 238 284 L 328 284 Q 344 284 344 300 L 344 360 Q 344 404 300 404 L 266 404 Q 222 404 222 360 Z" fill="url(#macacao)"/>
+  <rect x="236" y="250" width="12" height="44" rx="5" fill="#16867c"/>
+  <rect x="318" y="250" width="12" height="44" rx="5" fill="#16867c"/>
+  <circle cx="242" cy="292" r="7" fill="#fde68a"/>
+  <circle cx="324" cy="292" r="7" fill="#fde68a"/>
+  <!-- bolso com uma foto -->
+  <rect x="262" y="316" width="44" height="34" rx="6" fill="#0f766e"/>
+  <rect x="270" y="304" width="28" height="22" rx="3" fill="#fff" transform="rotate(-8 284 315)"/>
+
+  <!-- braços segurando a vassoura -->
+
+  <!-- cabeça -->
+  <circle cx="276" cy="176" r="78" fill="#f2c29b"/>
+  <ellipse cx="204" cy="184" rx="13" ry="18" fill="#e8ad80"/>
+  <!-- boné -->
+  <path d="M 200 156 Q 204 82 282 82 Q 352 84 356 150 Z" fill="url(#bone)"/>
+  <path d="M 282 146 Q 330 136 392 154 Q 396 166 380 168 Q 330 160 282 162 Z" fill="#1e40af"/>
+  <circle cx="280" cy="86" r="8" fill="#1e3a8a"/>
+  <text x="270" y="134" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="#fde68a">F</text>
+  <!-- rosto -->
+  <ellipse cx="262" cy="186" rx="8" ry="11" fill="#1f2937"/>
+  <ellipse cx="312" cy="186" rx="8" ry="11" fill="#1f2937"/>
+  <circle cx="265" cy="182" r="3" fill="#fff"/>
+  <circle cx="315" cy="182" r="3" fill="#fff"/>
+  <path d="M 250 166 Q 262 158 274 164" stroke="#7c4a2d" stroke-width="5" stroke-linecap="round" fill="none"/>
+  <path d="M 300 164 Q 312 158 324 166" stroke="#7c4a2d" stroke-width="5" stroke-linecap="round" fill="none"/>
+  <circle cx="246" cy="212" r="11" fill="#f87171" opacity="0.35"/>
+  <circle cx="334" cy="212" r="11" fill="#f87171" opacity="0.35"/>
+  <path d="M 264 218 Q 288 242 314 218" stroke="#7c2d12" stroke-width="6" stroke-linecap="round" fill="#fff"/>
+
+  <!-- braços segurando a vassoura (na frente do corpo) -->
+  <path d="M 222 286 Q 196 320 240 350" stroke="#e7d9a8" stroke-width="34" stroke-linecap="round" fill="none"/>
+  <path d="M 222 286 Q 196 320 240 350" stroke="#fef3c7" stroke-width="28" stroke-linecap="round" fill="none"/>
+  <path d="M 344 288 Q 372 262 344 232" stroke="#e7d9a8" stroke-width="34" stroke-linecap="round" fill="none"/>
+  <path d="M 344 288 Q 372 262 344 232" stroke="#fef3c7" stroke-width="28" stroke-linecap="round" fill="none"/>
+  <circle cx="252" cy="352" r="17" fill="#f2c29b"/>
+  <circle cx="342" cy="228" r="17" fill="#f2c29b"/>
+
+  <!-- brilhos de limpeza -->
+  <path d="M 420 236 L 428 260 L 452 268 L 428 276 L 420 300 L 412 276 L 388 268 L 412 260 Z" fill="#facc15"/>
+  <path d="M 448 160 L 453 174 L 467 179 L 453 184 L 448 198 L 443 184 L 429 179 L 443 174 Z" fill="#38bdf8"/>
+  <path d="M 120 300 L 125 314 L 139 319 L 125 324 L 120 338 L 115 324 L 101 319 L 115 314 Z" fill="#38bdf8"/>
+</svg>

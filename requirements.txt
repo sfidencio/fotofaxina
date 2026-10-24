@@ -6,3 +6,4 @@ psutil>=5.9
 google-auth>=2.29
 google-auth-oauthlib>=1.2
 requests>=2.31
+onnxruntime>=1.18

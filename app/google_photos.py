@@ -10,6 +10,7 @@ import shutil
 import time
 
 from .config import CLIENT_SECRET_PATH, TOKEN_PATH, resource
+from .i18n import _
 
 SCOPES = [
     "https://www.googleapis.com/auth/photoslibrary.appendonly",
@@ -78,14 +79,14 @@ class GooglePhotos:
                 creds = None  # app em modo "Teste" expira o token em 7 dias
         if not creds or not creds.valid:
             if not interactive:
-                raise NotConnected("Conecte sua conta Google na aba Configurações.")
+                raise NotConnected(_("Conecte sua conta Google na aba Configurações."))
             if not has_client_secret():
-                raise NotConnected("Selecione o arquivo client_secret.json na aba Configurações.")
+                raise NotConnected(_("Selecione o arquivo client_secret.json na aba Configurações."))
             flow = InstalledAppFlow.from_client_secrets_file(str(secret_path()), SCOPES)
             creds = flow.run_local_server(
                 port=0, open_browser=True,
-                authorization_prompt_message="Abrindo o navegador para login no Google...",
-                success_message="Pronto! Pode fechar esta aba e voltar ao FotoFaxina.",
+                authorization_prompt_message=_("Abrindo o navegador para login no Google…"),
+                success_message=_("Pronto! Pode fechar esta aba e voltar ao FotoFaxina."),
             )
         TOKEN_PATH.write_text(creds.to_json(), encoding="utf-8")
         self.session = AuthorizedSession(creds)
@@ -93,7 +94,7 @@ class GooglePhotos:
     # ---------- HTTP com retentativa ----------
     def _request(self, method: str, url: str, *, body_path: str | None = None, **kw):
         if self.session is None:
-            raise NotConnected("Conta Google não conectada.")
+            raise NotConnected(_("Conta Google não conectada."))
         delay = 2.0
         for attempt in range(7):
             if body_path is not None:
@@ -106,15 +107,16 @@ class GooglePhotos:
             if resp.status_code == 429:
                 text = resp.text.lower()
                 if "per day" in text or attempt >= 4:
-                    raise QuotaExceeded(
+                    raise QuotaExceeded(_(
                         "Limite diário da API do Google Fotos atingido. Continue amanhã — "
                         "o que já foi enviado fica registrado."
-                    )
+                    ))
             elif resp.status_code < 500:
                 raise GooglePhotosError(f"{resp.status_code}: {resp.text[:300]}")
             time.sleep(delay)
             delay = min(delay * 2, 60)
-        raise GooglePhotosError(f"Falha após várias tentativas ({resp.status_code}): {resp.text[:300]}")
+        raise GooglePhotosError(_("Falha após várias tentativas ({codigo}): {texto}").format(
+            codigo=resp.status_code, texto=resp.text[:300]))
 
     # ---------- operações ----------
     def upload_bytes(self, path: str, mime: str | None) -> str:

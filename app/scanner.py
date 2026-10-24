@@ -16,6 +16,7 @@ except ImportError:  # pragma: no cover
     pass
 
 from . import db
+from .i18n import _
 from .phash import phash
 
 Image.MAX_IMAGE_PIXELS = None
@@ -112,6 +113,7 @@ def analyze(path: str, st: os.stat_result) -> dict:
             with Image.open(path) as img:
                 info["width"], info["height"] = img.size
                 taken, info["camera"] = _exif_info(img)
+                img.draft("RGB", (1024, 1024))  # JPEG: decodifica já reduzida (bem mais rápido)
                 small = ImageOps.exif_transpose(img).convert("RGB")
                 small.thumbnail((512, 512))
                 info["phash"] = phash(small)
@@ -143,16 +145,16 @@ def scan(root: str, cfg, progress=None, log=None, stop=None) -> int:
     progress = progress or (lambda *a: None)
     log = log or (lambda *a: None)
     conn = db.connect()
-    progress("Listando arquivos", 0, 0, root)
+    progress(_("Listando arquivos"), 0, 0, root)
     files = list(iter_media(root, cfg.ignore_dirs))
     total = len(files)
-    log(f"{total} fotos/vídeos encontrados em {root}")
+    log(_("{n} fotos/vídeos encontrados em {pasta}").format(n=total, pasta=root))
     novos = 0
     for i, path in enumerate(files, 1):
         if stop is not None and stop.is_set():
             break
         if i % 25 == 0 or i == total:
-            progress("Lendo arquivos", i, total, os.path.basename(path))
+            progress(_("Lendo arquivos"), i, total, os.path.basename(path))
         try:
             st = os.stat(path)
         except OSError:
@@ -163,7 +165,7 @@ def scan(root: str, cfg, progress=None, log=None, stop=None) -> int:
         try:
             info = analyze(path, st)
         except OSError as e:
-            log(f"Não consegui ler {path}: {e}")
+            log(_("Não consegui ler {arquivo}: {erro}").format(arquivo=path, erro=e))
             continue
 
         if row is None:
@@ -194,7 +196,7 @@ def scan(root: str, cfg, progress=None, log=None, stop=None) -> int:
             conn.commit()
     conn.commit()
     dups = mark_duplicates(conn)
-    log(f"{novos} arquivos novos; {dups} duplicatas no total")
+    log(_("{novos} arquivos novos; {dup} duplicatas no total").format(novos=novos, dup=dups))
     conn.close()
     return novos
 

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Ícone do FotoFaxina: foto + vassoura + brilho -->
+  <defs>
+    <linearGradient id="fundo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#14b8a6"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+  </defs>
+  <rect x="40" y="40" width="944" height="944" rx="220" fill="url(#fundo)"/>
+
+  <!-- foto -->
+  <g transform="rotate(-8 470 470)">
+    <rect x="190" y="250" width="540" height="430" rx="56" fill="#ffffff"/>
+    <polygon points="240,630 400,410 540,630" fill="#14b8a6"/>
+    <polygon points="450,630 560,480 680,630" fill="#5eead4"/>
+    <circle cx="610" cy="340" r="46" fill="#fbbf24"/>
+  </g>
+
+  <!-- vassoura -->
+  <line x1="860" y1="290" x2="610" y2="720" stroke="#7c2d12" stroke-width="44" stroke-linecap="round"/>
+  <g transform="translate(590 760) rotate(30) scale(0.9)">
+    <rect x="-90" y="-60" width="180" height="56" rx="18" fill="#c2410c"/>
+    <path d="M -120 -10 L 120 -10 L 150 150 L -150 150 Z" fill="#facc15"/>
+    <g stroke="#ca8a04" stroke-width="14" stroke-linecap="round">
+      <line x1="-80" y1="20" x2="-104" y2="138"/>
+      <line x1="-27" y1="20" x2="-35" y2="138"/>
+      <line x1="27" y1="20" x2="35" y2="138"/>
+      <line x1="80" y1="20" x2="104" y2="138"/>
+    </g>
+  </g>
+
+  <!-- brilhos -->
+  <path d="M 820 110 L 842 178 L 910 200 L 842 222 L 820 290 L 798 222 L 730 200 L 798 178 Z" fill="#ffffff"/>
+  <path d="M 190 760 L 203 800 L 243 813 L 203 826 L 190 866 L 177 826 L 137 813 L 177 800 Z" fill="#ffffff" opacity="0.9"/>
+</svg>

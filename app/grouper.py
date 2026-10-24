@@ -7,12 +7,27 @@ from datetime import datetime, timedelta
 
 from . import db
 from .config import wants_upload
+from .i18n import _, language
 
 MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho",
          "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
+MONTHS = ["January", "February", "March", "April", "May", "June", "July",
+          "August", "September", "October", "November", "December"]
+
+
+def _event_period_en(start: datetime, end: datetime) -> str:
+    def d(x):
+        return f"{MONTHS[x.month - 1][:3]} {x.day}"
+    if start.date() == end.date():
+        return f"{d(start)}, {start.year}"
+    if start.year == end.year:
+        return f"{d(start)} – {d(end)}, {end.year}"
+    return f"{d(start)}, {start.year} – {d(end)}, {end.year}"
 
 
 def event_title(start: datetime, end: datetime) -> str:
+    if language() == "en":
+        return f"Event {_event_period_en(start, end)}"
     if start.date() == end.date():
         period = f"{start:%d/%m/%Y}"
     elif (start.year, start.month) == (end.year, end.month):
@@ -25,7 +40,16 @@ def event_title(start: datetime, end: datetime) -> str:
 
 
 def month_title(dt: datetime) -> str:
+    if language() == "en":
+        return f"{MONTHS[dt.month - 1]} {dt.year}"
     return f"{MESES[dt.month - 1]} de {dt.year}"
+
+
+def year_title(template: str, year: int | None) -> str:
+    """Modelo do nome do álbum anual: aceita {ano} ou {year}."""
+    tpl = template or _("Fotos {ano}")
+    value = str(year) if year is not None else _("sem data")
+    return tpl.replace("{ano}", value).replace("{year}", value)
 
 
 YEAR_DIR_RE = re.compile(r"^((?:19|20)\d{2})(?!\d)")
@@ -48,10 +72,10 @@ def plan_years(items: list[tuple[int, datetime, str, str]], title_tpl: str):
     for pid, dt, date_source, path in items:
         year = dt.year if date_source != "arquivo" else year_from_folder(path)
         if year is None:
-            key, title = "ano-sem-data", title_tpl.replace("{ano}", "sem data")
+            key, title = "ano-sem-data", year_title(title_tpl, None)
             start = end = dt
         else:
-            key, title = f"ano-{year}", title_tpl.replace("{ano}", str(year))
+            key, title = f"ano-{year}", year_title(title_tpl, year)
             start, end = datetime(year, 1, 1), datetime(year, 12, 31, 23, 59)
         a = albums.setdefault(key, [title, start, end, []])
         a[1], a[2] = min(a[1], start), max(a[2], end)
@@ -136,5 +160,5 @@ def group(cfg, log=None) -> int:
     )
     conn.commit()
     conn.close()
-    log(f"{len(items)} itens organizados em {len(plan)} álbuns")
+    log(_("{n} itens organizados em {albuns} álbuns").format(n=len(items), albuns=len(plan)))
     return len(plan)

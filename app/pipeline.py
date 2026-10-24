@@ -6,6 +6,7 @@ import os
 from . import classifier, db, grouper, scanner
 from .config import Config, wants_upload
 from .google_photos import BATCH_LIMIT, GooglePhotos, QuotaExceeded
+from .i18n import _
 
 
 def _noop(*a, **k):
@@ -37,7 +38,7 @@ def reagrupar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
 
 def conectar_google(progress=_noop, log=_noop, stop=None) -> bool:
     GooglePhotos().connect(interactive=True)
-    log("Conta Google conectada.")
+    log(_("Conta Google conectada."))
     return True
 
 
@@ -52,9 +53,9 @@ def enviar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
         try:
             gp.rename_album(a["google_id"], a["title"])
             conn.execute("UPDATE albums SET pending_rename=0 WHERE key=?", (a["key"],))
-            log(f"Álbum renomeado: {a['title']}")
+            log(_("Álbum renomeado: {titulo}").format(titulo=a["title"]))
         except Exception as e:
-            log(f"Não consegui renomear '{a['title']}': {e}")
+            log(_("Não consegui renomear “{titulo}”: {erro}").format(titulo=a["title"], erro=e))
     conn.commit()
 
     rows = conn.execute(
@@ -66,7 +67,7 @@ def enviar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
         r[0] for r in conn.execute("SELECT sha256 FROM photos WHERE media_item_id IS NOT NULL")
     }
     total = len(rows)
-    log(f"{total} itens para enviar")
+    log(_("{n} itens para enviar").format(n=total))
     enviados = erros = 0
     done = 0
     novos_albuns: list[str] = []
@@ -89,14 +90,14 @@ def enviar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
                 pairs = []
                 for r in chunk:
                     done += 1
-                    progress("Enviando", done, total, os.path.basename(r["path"]))
+                    progress(_("Enviando"), done, total, os.path.basename(r["path"]))
                     if r["sha256"] in uploaded_hashes:
                         conn.execute("UPDATE photos SET status='uploaded' WHERE id=?", (r["id"],))
                         continue
                     if not os.path.exists(r["path"]):
                         conn.execute(
                             "UPDATE photos SET status='error', error=? WHERE id=?",
-                            ("Arquivo indisponível (HD desconectado?)", r["id"]),
+                            (_("Arquivo indisponível (HD desconectado?)"), r["id"]),
                         )
                         erros += 1
                         continue
@@ -121,10 +122,10 @@ def enviar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
                     )
                     novos_albuns.append(album["title"])
                     conn.commit()
-                    log(f"Álbum criado: {album['title']}")
+                    log(_("Álbum criado: {titulo}").format(titulo=album["title"]))
                 results = gp.batch_create(album_id, pairs)
                 for tok, photo_id in tokens.items():
-                    ok, val = results.get(tok, (False, "sem resposta do Google"))
+                    ok, val = results.get(tok, (False, _("sem resposta do Google")))
                     if ok:
                         conn.execute(
                             "UPDATE photos SET status='uploaded', media_item_id=?, error=NULL WHERE id=?",
@@ -143,10 +144,10 @@ def enviar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
     finally:
         conn.commit()
 
-    log(f"Envio concluído: {enviados} enviados, {erros} com erro")
+    log(_("Envio concluído: {ok} enviados, {err} com erro").format(ok=enviados, err=erros))
     if novos_albuns:
-        log(f"Álbuns novos: {', '.join(novos_albuns)}. Para compartilhar, use a aba Álbuns → "
-            "“Abrir no Google Fotos para compartilhar”.")
+        log(_("Álbuns novos: {lista}. Para compartilhar, use a aba Álbuns → "
+              "“Abrir no Google Fotos para compartilhar”.").format(lista=", ".join(novos_albuns)))
     res = db.summary(conn, cfg)
     conn.close()
     res["enviados_agora"] = enviados

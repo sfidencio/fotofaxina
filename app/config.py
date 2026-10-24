@@ -49,10 +49,12 @@ SOURCES: dict[str, str] = {
 class Config:
     upload_categories: list = field(default_factory=lambda: ["foto", "paisagem", "video"])
     include_whatsapp: bool = True          # envia fotos pessoais recebidas no WhatsApp
-    use_ai: bool = True                    # usa o modelo CLIP local quando instalado
+    use_ai: bool = True                    # IA leve (CLIP em ONNX) para WhatsApp/origem desconhecida
+    ai_on_camera: bool = False             # também passa fotos de câmera pela IA (mais lento)
+    language: str = "auto"                 # auto | pt | en
     ai_min_confidence: float = 0.45        # abaixo disso o item aparece como "baixa confiança"
     album_mode: str = "evento"             # evento | mes | ano
-    year_album_title: str = "Fotos {ano}"  # nome do álbum no modo "ano"
+    year_album_title: str = ""             # nome do álbum no modo "ano" ("" = padrão do idioma)
     event_gap_hours: float = 24.0          # intervalo sem fotos que separa dois eventos
     min_event_size: int = 8                # eventos menores vão para o álbum do mês
     auto_scan_on_drive: bool = True        # analisa sozinho quando um HD é plugado

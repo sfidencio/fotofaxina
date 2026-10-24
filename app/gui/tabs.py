@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 
 from PySide6.QtCore import QSize, Qt, QThreadPool, QUrl, Signal
-from PySide6.QtGui import QDesktopServices, QIcon
+from PySide6.QtGui import QDesktopServices, QIcon, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView, QCheckBox, QComboBox, QDoubleSpinBox, QFileDialog, QFormLayout, QGroupBox,
     QHBoxLayout, QHeaderView, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMessageBox, QPlainTextEdit,
@@ -13,10 +13,20 @@ from PySide6.QtWidgets import (
 )
 
 from .. import autostart, classifier, db, google_photos
-from ..config import CATEGORIES, SOURCES, TOKEN_PATH, Config, wants_upload
+from ..config import CATEGORIES, SOURCES, TOKEN_PATH, Config, resource, wants_upload
+from ..i18n import LANGUAGES, _, language
 from .workers import ThumbJob
 
 PAGE = 300
+REPO = "https://github.com/sfidencio/fotofaxina/blob/master/"
+
+
+def cat_label(key: str | None) -> str:
+    return _(CATEGORIES[key]) if key in CATEGORIES else "—"
+
+
+def guide_url() -> str:
+    return REPO + ("docs/CONFIGURAR-GOOGLE.md" if language() == "pt" else "docs/GOOGLE-SETUP.md")
 
 
 # ------------------------------------------------------------------ Início
@@ -29,20 +39,33 @@ class InicioTab(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.source_lbl = QLabel("Nenhuma pasta selecionada. Plugue um HD ou escolha uma pasta.")
+        mascot = QLabel()
+        pix = QPixmap(str(resource("assets/mascote-128.png")))
+        if not pix.isNull():
+            mascot.setPixmap(pix.scaledToHeight(96, Qt.SmoothTransformation))
+        title = QLabel(
+            "<span style='font-size:20pt; font-weight:600'>FotoFaxina</span><br>"
+            + _("Faxina nas fotos do HD: separa, remove duplicadas e envia para o Google Fotos.")
+        )
+        title.setWordWrap(True)
+        header = QHBoxLayout()
+        header.addWidget(mascot)
+        header.addWidget(title, 1)
+
+        self.source_lbl = QLabel(_("Nenhuma pasta selecionada. Plugue um HD ou escolha uma pasta."))
         self.source_lbl.setWordWrap(True)
         self.account_lbl = QLabel()
 
-        self.btn_folder = QPushButton("Escolher pasta / HD…")
-        self.btn_analyze = QPushButton("1. Analisar")
-        self.btn_upload = QPushButton("2. Enviar para o Google Fotos")
-        self.btn_stop = QPushButton("Parar")
-        self.btn_retry = QPushButton("Tentar erros de novo")
+        self.btn_folder = QPushButton(_("Escolher pasta / HD…"))
+        self.btn_analyze = QPushButton(_("1. Analisar"))
+        self.btn_upload = QPushButton(_("2. Enviar para o Google Fotos"))
+        self.btn_stop = QPushButton(_("Parar"))
+        self.btn_retry = QPushButton(_("Tentar erros de novo"))
         self.btn_stop.setEnabled(False)
         for b, sig in ((self.btn_folder, self.choose_folder), (self.btn_analyze, self.analyze),
                        (self.btn_upload, self.upload), (self.btn_stop, self.stop),
                        (self.btn_retry, self.retry_errors)):
-            b.clicked.connect(lambda _=False, s=sig: s.emit())
+            b.clicked.connect(lambda _checked=False, s=sig: s.emit())
 
         row = QHBoxLayout()
         for b in (self.btn_folder, self.btn_analyze, self.btn_upload, self.btn_stop):
@@ -50,7 +73,7 @@ class InicioTab(QWidget):
         row.addStretch()
         row.addWidget(self.btn_retry)
 
-        self.stage_lbl = QLabel("Parado")
+        self.stage_lbl = QLabel(_("Parado"))
         self.bar = QProgressBar()
         self.bar.setRange(0, 1)
         self.bar.setValue(0)
@@ -62,13 +85,14 @@ class InicioTab(QWidget):
         self.logbox.setMaximumBlockCount(3000)
 
         lay = QVBoxLayout(self)
+        lay.addLayout(header)
         lay.addWidget(self.source_lbl)
         lay.addWidget(self.account_lbl)
         lay.addLayout(row)
         lay.addWidget(self.stage_lbl)
         lay.addWidget(self.bar)
         lay.addWidget(self.summary_lbl)
-        lay.addWidget(QLabel("Registro:"))
+        lay.addWidget(QLabel(_("Registro:")))
         lay.addWidget(self.logbox, 1)
 
     def set_busy(self, busy: bool):
@@ -76,7 +100,7 @@ class InicioTab(QWidget):
             b.setEnabled(not busy)
         self.btn_stop.setEnabled(busy)
         if not busy:
-            self.stage_lbl.setText("Parado")
+            self.stage_lbl.setText(_("Parado"))
 
     def set_progress(self, stage, done, total, msg):
         self.stage_lbl.setText(f"{stage}… {msg}" if msg else f"{stage}…")
@@ -91,12 +115,13 @@ class InicioTab(QWidget):
 
     def show_summary(self, s: dict):
         cats = " · ".join(
-            f"{CATEGORIES.get(k, k)}: <b>{v}</b>" for k, v in sorted(s.get("por_categoria", {}).items())
+            f"{cat_label(k)}: <b>{v}</b>" for k, v in sorted(s.get("por_categoria", {}).items())
         )
         self.summary_lbl.setText(
-            f"Arquivos: <b>{s['total']}</b> · Duplicados: <b>{s['duplicadas']}</b> · "
-            f"A enviar: <b>{s['a_enviar']}</b> · Já enviados: <b>{s['enviadas']}</b> · "
-            f"Erros: <b>{s['erros']}</b><br>{cats}"
+            _("Arquivos: <b>{total}</b> · Duplicados: <b>{dup}</b> · A enviar: <b>{todo}</b> · "
+              "Já enviados: <b>{done}</b> · Erros: <b>{err}</b>").format(
+                total=s["total"], dup=s["duplicadas"], todo=s["a_enviar"], done=s["enviadas"], err=s["erros"])
+            + f"<br>{cats}"
         )
 
 
@@ -114,23 +139,23 @@ class RevisaoTab(QWidget):
         self._thumb_jobs: list[ThumbJob] = []
 
         self.cat_combo = QComboBox()
-        self.cat_combo.addItem("Todas as categorias", None)
-        for k, v in CATEGORIES.items():
-            self.cat_combo.addItem(v, k)
-        self.cat_combo.addItem("Duplicados", "__dup")
+        self.cat_combo.addItem(_("Todas as categorias"), None)
+        for k in CATEGORIES:
+            self.cat_combo.addItem(cat_label(k), k)
+        self.cat_combo.addItem(_("Duplicados"), "__dup")
         self.sit_combo = QComboBox()
-        for label, key in (("Vão para o Google", "upload"), ("Não vão", "skip"),
-                           ("Baixa confiança", "low"), ("Já enviadas", "done"),
-                           ("Com erro", "error"), ("Tudo", "all")):
+        for label, key in ((_("Vão para o Google"), "upload"), (_("Não vão"), "skip"),
+                           (_("Baixa confiança"), "low"), (_("Já enviadas"), "done"),
+                           (_("Com erro"), "error"), (_("Tudo"), "all")):
             self.sit_combo.addItem(label, key)
         self.cat_combo.currentIndexChanged.connect(self.reload)
         self.sit_combo.currentIndexChanged.connect(self.reload)
         self.count_lbl = QLabel()
 
         top = QHBoxLayout()
-        top.addWidget(QLabel("Categoria:"))
+        top.addWidget(QLabel(_("Categoria:")))
         top.addWidget(self.cat_combo)
-        top.addWidget(QLabel("Situação:"))
+        top.addWidget(QLabel(_("Situação:")))
         top.addWidget(self.sit_combo)
         top.addStretch()
         top.addWidget(self.count_lbl)
@@ -145,15 +170,15 @@ class RevisaoTab(QWidget):
         self.list.setWordWrap(True)
         self.list.itemDoubleClicked.connect(self._open_file)
 
-        self.btn_more = QPushButton("Carregar mais")
+        self.btn_more = QPushButton(_("Carregar mais"))
         self.btn_more.clicked.connect(self._show_more)
-        btn_send = QPushButton("Enviar selecionadas")
-        btn_skip = QPushButton("Não enviar")
-        btn_auto = QPushButton("Voltar ao automático")
+        btn_send = QPushButton(_("Enviar selecionadas"))
+        btn_skip = QPushButton(_("Não enviar"))
+        btn_auto = QPushButton(_("Voltar ao automático"))
         self.move_combo = QComboBox()
-        for k, v in CATEGORIES.items():
-            self.move_combo.addItem(v, k)
-        btn_move = QPushButton("Mudar categoria")
+        for k in CATEGORIES:
+            self.move_combo.addItem(cat_label(k), k)
+        btn_move = QPushButton(_("Mudar categoria"))
         btn_send.clicked.connect(lambda: self._set_decision("upload"))
         btn_skip.clicked.connect(lambda: self._set_decision("skip"))
         btn_auto.clicked.connect(lambda: self._set_decision(None))
@@ -165,7 +190,7 @@ class RevisaoTab(QWidget):
         bottom.addStretch()
         bottom.addWidget(self.btn_more)
 
-        hint = QLabel("Dica: Ctrl/Shift para selecionar várias. Duplo clique abre o arquivo.")
+        hint = QLabel(_("Dica: Ctrl/Shift para selecionar várias. Duplo clique abre o arquivo."))
         hint.setStyleSheet("color: gray")
         lay = QVBoxLayout(self)
         lay.addLayout(top)
@@ -226,10 +251,9 @@ class RevisaoTab(QWidget):
             mark = "↑ "
         else:
             mark = "✕ "
-        cat = CATEGORIES.get(r["category"] or "", "—")
         conf = f" {r['confidence']:.0%}" if r["confidence"] is not None and r["category_by"] == "ia" else ""
         date = (r["taken_at"] or "")[:10]
-        return f"{mark}{cat}{conf}\n{date}"
+        return f"{mark}{cat_label(r['category'])}{conf}\n{date}"
 
     def _show_more(self):
         chunk = self.rows[self.shown:self.shown + PAGE]
@@ -237,18 +261,20 @@ class RevisaoTab(QWidget):
         for r in chunk:
             it = QListWidgetItem(self.video_icon if r["is_video"] else self.file_icon, self._label(r))
             it.setData(Qt.UserRole, r["id"])
-            it.setToolTip(
-                f"{r['path']}\nOrigem: {SOURCES.get(r['source'], r['source'])}"
-                f"\nData: {r['taken_at']} ({r['date_source']})"
-                + (f"\nCâmera: {r['camera']}" if r["camera"] else "")
-                + (f"\nErro: {r['error']}" if r["error"] else "")
-            )
+            source = _(SOURCES[r["source"]]) if r["source"] in SOURCES else (r["source"] or "")
+            tip = [r["path"], _("Origem: {origem}").format(origem=source),
+                   _("Data: {data} ({fonte})").format(data=r["taken_at"], fonte=r["date_source"])]
+            if r["camera"]:
+                tip.append(_("Câmera: {camera}").format(camera=r["camera"]))
+            if r["error"]:
+                tip.append(_("Erro: {erro}").format(erro=r["error"]))
+            it.setToolTip("\n".join(tip))
             self.list.addItem(it)
             self.items_by_id[r["id"]] = it
             if not r["is_video"]:
                 thumbs.append((r["id"], r["path"]))
         self.shown += len(chunk)
-        self.count_lbl.setText(f"{self.shown} de {len(self.rows)}")
+        self.count_lbl.setText(_("{n} de {total}").format(n=self.shown, total=len(self.rows)))
         self.btn_more.setEnabled(self.shown < len(self.rows))
         if thumbs:
             job = ThumbJob(thumbs)
@@ -307,7 +333,9 @@ class AlbunsTab(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.table = QTableWidget(0, 4)
-        self.table.setHorizontalHeaderLabels(["Título (clique duplo para renomear)", "Período", "Itens", "No Google"])
+        self.table.setHorizontalHeaderLabels(
+            [_("Título (clique duplo para renomear)"), _("Período"), _("Itens"), _("No Google")]
+        )
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         for c in (1, 2, 3):
             self.table.horizontalHeader().setSectionResizeMode(c, QHeaderView.ResizeToContents)
@@ -318,19 +346,19 @@ class AlbunsTab(QWidget):
         self.table.itemSelectionChanged.connect(self._selection_changed)
         self.urls: dict[str, str | None] = {}
 
-        self.btn_share = QPushButton("Abrir no Google Fotos para compartilhar")
+        self.btn_share = QPushButton(_("Abrir no Google Fotos para compartilhar"))
         self.btn_share.setEnabled(False)
         self.btn_share.clicked.connect(self._open_album)
-        btn = QPushButton("Reagrupar (após mudar configurações)")
+        btn = QPushButton(_("Reagrupar (após mudar configurações)"))
         btn.clicked.connect(lambda: self.regroup.emit())
-        share_hint = QLabel(
+        share_hint = QLabel(_(
             "Para compartilhar: selecione um álbum já enviado → “Abrir no Google Fotos para "
             "compartilhar” → no navegador, clique em <b>Compartilhar</b> e digite os e-mails. "
             "Quem você adicionar recebe as fotos novas que forem para esse álbum depois."
-        )
+        ))
         share_hint.setWordWrap(True)
-        hint = QLabel("Os álbuns são criados no Google Fotos só no envio. Renomeie à vontade antes — "
-                      "ex.: “Evento 24 a 26/12/2023” → “Natal 2023”.")
+        hint = QLabel(_("Os álbuns são criados no Google Fotos só no envio. Renomeie à vontade antes — "
+                        "ex.: “Evento 24 a 26/12/2023” → “Natal 2023”."))
         hint.setWordWrap(True)
         hint.setStyleSheet("color: gray")
         lay = QVBoxLayout(self)
@@ -353,7 +381,7 @@ class AlbunsTab(QWidget):
         key = self._selected_key()
         url = self.urls.get(key) if key else None
         self.btn_share.setEnabled(bool(url))
-        self.btn_share.setToolTip("" if url else "Este álbum ainda não foi enviado ao Google Fotos.")
+        self.btn_share.setToolTip("" if url else _("Este álbum ainda não foi enviado ao Google Fotos."))
 
     def _open_album(self):
         url = self.urls.get(self._selected_key() or "")
@@ -377,7 +405,7 @@ class AlbunsTab(QWidget):
             s, e = (r["start"] or "")[:10], (r["end"] or "")[:10]
             period = s if s == e else f"{s} → {e}"
             for c, val in ((1, period), (2, f"{r['up'] or 0}/{r['n']}"),
-                           (3, "Sim" if r["google_id"] else "Ainda não")):
+                           (3, _("Sim") if r["google_id"] else _("Ainda não"))):
                 item = QTableWidgetItem(val)
                 item.setFlags(item.flags() & ~Qt.ItemIsEditable)
                 self.table.setItem(i, c, item)
@@ -409,64 +437,78 @@ class ConfigTab(QWidget):
         super().__init__(parent)
         self.cfg = cfg
 
-        cats = QGroupBox("O que vai para o Google Fotos")
+        cats = QGroupBox(_("O que vai para o Google Fotos"))
         cl = QVBoxLayout(cats)
         self.cat_checks: dict[str, QCheckBox] = {}
-        for k, v in CATEGORIES.items():
-            cb = QCheckBox(v)
+        for k in CATEGORIES:
+            cb = QCheckBox(cat_label(k))
             self.cat_checks[k] = cb
             cl.addWidget(cb)
-        self.wa_check = QCheckBox("Incluir fotos pessoais recebidas pelo WhatsApp")
+        self.wa_check = QCheckBox(_("Incluir fotos pessoais recebidas pelo WhatsApp"))
         cl.addWidget(self.wa_check)
+        cl.addStretch()
 
-        proc = QGroupBox("Análise e álbuns")
-        fl = QFormLayout(proc)
-        self.ai_check = QCheckBox("Usar IA local (CLIP) para separar memes, prints e documentos")
+        ai = QGroupBox(_("Inteligência artificial (embutida, funciona sem internet)"))
+        il = QFormLayout(ai)
+        self.ai_check = QCheckBox(_("Usar IA para separar memes, prints e documentos"))
+        self.ai_cam_check = QCheckBox(_("Analisar também as fotos da câmera (mais lento)"))
+        self.ai_check.toggled.connect(lambda on: self.ai_cam_check.setEnabled(on))
         self.ai_status = QLabel()
+        self.ai_status.setWordWrap(True)
+        self.ai_status.setStyleSheet("color: gray")
         self.conf_spin = QDoubleSpinBox()
         self.conf_spin.setRange(0.0, 1.0)
         self.conf_spin.setSingleStep(0.05)
-        self.gap_spin = QDoubleSpinBox()
-        self.gap_spin.setRange(1, 720)
-        self.gap_spin.setSuffix(" horas")
-        self.min_spin = QSpinBox()
-        self.min_spin.setRange(1, 1000)
-        self.min_spin.setSuffix(" fotos")
-        fl.addRow(self.ai_check)
-        fl.addRow(self.ai_status)
-        fl.addRow("Confiança mínima da IA:", self.conf_spin)
+        il.addRow(self.ai_check)
+        il.addRow(self.ai_cam_check)
+        il.addRow(_("Confiança mínima da IA:"), self.conf_spin)
+        il.addRow(self.ai_status)
+
+        proc = QGroupBox(_("Álbuns"))
+        fl = QFormLayout(proc)
         self.mode_combo = QComboBox()
-        for label, key in (("Por evento (fotos próximas no tempo)", "evento"),
-                           ("Por mês", "mes"), ("Por ano", "ano")):
+        for label, key in ((_("Por evento (fotos próximas no tempo)"), "evento"),
+                           (_("Por mês"), "mes"), (_("Por ano"), "ano")):
             self.mode_combo.addItem(label, key)
         self.year_title = QLineEdit()
-        self.year_title.setToolTip("Use {ano} onde o ano deve aparecer. Ex.: Fotos {ano}")
+        self.year_title.setPlaceholderText(_("Fotos {ano}"))
+        self.year_title.setToolTip(_("Use {ano} onde o ano deve aparecer. Ex.: Fotos {ano}"))
         self.mode_combo.currentIndexChanged.connect(self._mode_changed)
-        fl.addRow("Organizar álbuns:", self.mode_combo)
-        fl.addRow("Nome do álbum anual:", self.year_title)
-        fl.addRow("Novo evento após um intervalo de:", self.gap_spin)
-        fl.addRow("Tamanho mínimo de um evento:", self.min_spin)
+        self.gap_spin = QDoubleSpinBox()
+        self.gap_spin.setRange(1, 720)
+        self.gap_spin.setSuffix(_(" horas"))
+        self.min_spin = QSpinBox()
+        self.min_spin.setRange(1, 1000)
+        self.min_spin.setSuffix(_(" fotos"))
+        fl.addRow(_("Organizar álbuns:"), self.mode_combo)
+        fl.addRow(_("Nome do álbum anual:"), self.year_title)
+        fl.addRow(_("Novo evento após um intervalo de:"), self.gap_spin)
+        fl.addRow(_("Tamanho mínimo de um evento:"), self.min_spin)
 
-        auto = QGroupBox("Automação")
-        al = QVBoxLayout(auto)
-        self.scan_check = QCheckBox("Analisar automaticamente quando um HD for plugado")
-        self.upload_check = QCheckBox("Enviar automaticamente após a análise (sem revisar)")
-        self.startup_check = QCheckBox("Iniciar junto com o Windows (minimizado, esperando o HD)")
+        auto = QGroupBox(_("Automação e idioma"))
+        al = QFormLayout(auto)
+        self.scan_check = QCheckBox(_("Analisar automaticamente quando um HD for plugado"))
+        self.upload_check = QCheckBox(_("Enviar automaticamente após a análise (sem revisar)"))
+        self.startup_check = QCheckBox(_("Iniciar junto com o Windows (minimizado, esperando o HD)"))
         self.startup_check.setVisible(autostart.supported())
-        al.addWidget(self.scan_check)
-        al.addWidget(self.upload_check)
-        al.addWidget(self.startup_check)
+        self.lang_combo = QComboBox()
+        for key, label in LANGUAGES.items():
+            self.lang_combo.addItem(_(label), key)
+        al.addRow(self.scan_check)
+        al.addRow(self.upload_check)
+        al.addRow(self.startup_check)
+        al.addRow(_("Idioma / Language:"), self.lang_combo)
 
-        acc = QGroupBox("Conta Google")
+        acc = QGroupBox(_("Conta Google"))
         gl = QVBoxLayout(acc)
         self.acc_lbl = QLabel()
         self.acc_lbl.setWordWrap(True)
         self.acc_lbl.setOpenExternalLinks(True)
-        b1 = QPushButton("Selecionar client_secret.json…")
+        b1 = QPushButton(_("Selecionar client_secret.json…"))
         # no instalador com credencial embutida o usuário final não precisa disso
         b1.setVisible(google_photos.bundled_secret_path() is None)
-        b2 = QPushButton("Conectar conta Google")
-        b3 = QPushButton("Desconectar")
+        b2 = QPushButton(_("Conectar conta Google"))
+        b3 = QPushButton(_("Desconectar"))
         b1.clicked.connect(self._pick_secret)
         b2.clicked.connect(lambda: self.connect_google.emit())
         b3.clicked.connect(self._disconnect)
@@ -477,16 +519,17 @@ class ConfigTab(QWidget):
         gl.addWidget(self.acc_lbl)
         gl.addLayout(row)
 
-        save = QPushButton("Salvar configurações")
+        save = QPushButton(_("Salvar configurações"))
         save.clicked.connect(self._save)
 
         lay = QVBoxLayout(self)
         top = QHBoxLayout()
         top.addWidget(cats)
-        right = QVBoxLayout()
-        right.addWidget(proc)
-        right.addWidget(auto)
-        top.addLayout(right, 1)
+        mid = QVBoxLayout()
+        mid.addWidget(ai)
+        mid.addWidget(proc)
+        top.addLayout(mid, 1)
+        top.addWidget(auto, 1)
         lay.addLayout(top)
         lay.addWidget(acc)
         lay.addStretch()
@@ -499,6 +542,8 @@ class ConfigTab(QWidget):
             cb.setChecked(k in c.upload_categories)
         self.wa_check.setChecked(c.include_whatsapp)
         self.ai_check.setChecked(c.use_ai)
+        self.ai_cam_check.setChecked(c.ai_on_camera)
+        self.ai_cam_check.setEnabled(c.use_ai)
         self.conf_spin.setValue(c.ai_min_confidence)
         self.mode_combo.setCurrentIndex(max(0, self.mode_combo.findData(c.album_mode)))
         self.year_title.setText(c.year_album_title)
@@ -508,9 +553,11 @@ class ConfigTab(QWidget):
         self.scan_check.setChecked(c.auto_scan_on_drive)
         self.upload_check.setChecked(c.auto_upload)
         self.startup_check.setChecked(autostart.is_enabled())
+        self.lang_combo.setCurrentIndex(max(0, self.lang_combo.findData(c.language)))
         self.ai_status.setText(
-            "IA instalada." if classifier.ai_available()
-            else "IA não instalada — rode: pip install -r requirements-ia.txt (sem ela, só regras)."
+            _("IA pronta: modelo leve embutido, roda no processador, sem placa de vídeo.")
+            if classifier.ai_available()
+            else _("Modelo de IA não encontrado nesta instalação — usando só as regras.")
         )
         self.refresh_account()
 
@@ -522,18 +569,17 @@ class ConfigTab(QWidget):
 
     def refresh_account(self):
         if TOKEN_PATH.exists():
-            self.acc_lbl.setText("✔ Conta conectada.")
+            self.acc_lbl.setText(_("✔ Conta conectada."))
         elif google_photos.has_client_secret():
-            self.acc_lbl.setText("Falta só clicar em “Conectar conta Google” e autorizar no navegador.")
+            self.acc_lbl.setText(_("Falta só clicar em “Conectar conta Google” e autorizar no navegador."))
         else:
             self.acc_lbl.setText(
-                'Falta a credencial do Google (uma vez só, ~10 min). '
-                '<a href="https://github.com/sfidencio/fotofaxina/blob/master/docs/CONFIGURAR-GOOGLE.md">'
-                'Veja o passo a passo em português</a>.'
+                _("Falta a credencial do Google (uma vez só, ~10 min).")
+                + f' <a href="{guide_url()}">' + _("Veja o passo a passo") + "</a>."
             )
 
     def _pick_secret(self):
-        path, _ = QFileDialog.getOpenFileName(self, "client_secret.json", "", "JSON (*.json)")
+        path, _filter = QFileDialog.getOpenFileName(self, "client_secret.json", "", "JSON (*.json)")
         if path:
             google_photos.install_client_secret(path)
             self.refresh_account()
@@ -544,23 +590,31 @@ class ConfigTab(QWidget):
 
     def _save(self):
         c = self.cfg
+        old_lang = c.language
         c.upload_categories = [k for k, cb in self.cat_checks.items() if cb.isChecked()]
         c.include_whatsapp = self.wa_check.isChecked()
         c.use_ai = self.ai_check.isChecked()
+        c.ai_on_camera = self.ai_cam_check.isChecked()
         c.ai_min_confidence = self.conf_spin.value()
         c.album_mode = self.mode_combo.currentData()
-        c.year_album_title = self.year_title.text().strip() or "Fotos {ano}"
-        if "{ano}" not in c.year_album_title:
-            c.year_album_title += " {ano}"
+        title = self.year_title.text().strip()
+        if title and "{ano}" not in title and "{year}" not in title:
+            title += " {ano}"
+        c.year_album_title = title
         c.event_gap_hours = self.gap_spin.value()
         c.min_event_size = self.min_spin.value()
         c.auto_scan_on_drive = self.scan_check.isChecked()
         c.auto_upload = self.upload_check.isChecked()
+        c.language = self.lang_combo.currentData()
         if autostart.supported():
             try:
                 autostart.set_enabled(self.startup_check.isChecked())
             except OSError as e:
-                QMessageBox.warning(self, "Configurações", f"Não consegui alterar a inicialização: {e}")
+                QMessageBox.warning(self, _("Configurações"),
+                                    _("Não consegui alterar a inicialização: {erro}").format(erro=e))
         c.save()
-        QMessageBox.information(self, "Configurações", "Salvo. Use “Reagrupar” na aba Álbuns para aplicar.")
+        msg = _("Salvo. Use “Reagrupar” na aba Álbuns para aplicar.")
+        if c.language != old_lang:
+            msg += "\n\n" + _("O novo idioma vale a partir da próxima vez que o FotoFaxina for aberto.")
+        QMessageBox.information(self, _("Configurações"), msg)
         self.saved.emit()

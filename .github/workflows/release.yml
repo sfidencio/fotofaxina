@@ -39,9 +39,36 @@ jobs:
             echo "publicar=true" >> "$GITHUB_OUTPUT"
           fi
 
-  windows:
+  # Gera a IA leve (CLIP -> ONNX int8). Fica em cache enquanto as frases/script não mudarem.
+  modelo:
     needs: versao
     if: needs.versao.outputs.publicar == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          path: models
+          key: modelo-${{ hashFiles('packaging/build_model.py', 'app/ai_prompts.py', 'app/classifier.py', 'packaging/requirements-model.txt') }}
+      - uses: actions/setup-python@v5
+        if: steps.cache.outputs.cache-hit != 'true'
+        with:
+          python-version: "3.11"
+      - name: Gerar modelo
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
+          pip install -r packaging/requirements-model.txt
+          python packaging/build_model.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: modelo
+          path: models/
+          retention-days: 7
+
+  windows:
+    needs: [versao, modelo]
     runs-on: windows-latest
     env:
       VERSION: ${{ needs.versao.outputs.version }}
@@ -51,15 +78,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: modelo
+          path: models
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
 
       - name: Dependências
+        shell: pwsh
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt pyinstaller
+          python -m pip install --upgrade pip wheel
+          pip install -r requirements.txt
+          # PyInstaller com o "bootloader" compilado aqui mesmo: o bootloader padrão é usado por
+          # muito malware e por isso é alvo de falsos positivos nos antivírus.
+          $env:PYINSTALLER_COMPILE_BOOTLOADER = "1"
+          pip install --no-binary pyinstaller pyinstaller
+          if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Não deu para compilar o bootloader; usando o padrão."
+            pip install pyinstaller
+          }
+
+      - name: Conferir traduções
+        run: python packaging/check_i18n.py
 
       - name: Gravar versão no app
         shell: pwsh
@@ -74,13 +118,18 @@ jobs:
       - name: Gerar executável (PyInstaller)
         run: pyinstaller packaging/fotofaxina.spec --noconfirm
 
-      - name: Testar executável
+      - name: Testar executável (análise + IA)
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force teste | Out-Null
+          python -c "from PIL import Image, ImageDraw; im=Image.new('RGB',(900,900),'white'); d=ImageDraw.Draw(im); d.rectangle([0,0,900,150],fill='black'); im.save('teste/IMG-20240101-WA0001.jpg'); Image.new('RGB',(1200,800),(30,120,200)).save('teste/IMG-20240102-WA0002.jpg')"
           $env:FOTOFAXINA_DIR = "$pwd\teste-dados"
           $p = Start-Process -FilePath dist\FotoFaxina\FotoFaxina.exe -ArgumentList "--cli","teste" -Wait -PassThru
+          Get-Content teste-dados\cli.log
           if ($p.ExitCode -ne 0) { throw "O executável falhou (código $($p.ExitCode))" }
+          if (-not (Select-String -Path teste-dados\cli.log -Pattern "IA leve carregada|Lightweight AI loaded" -Quiet)) {
+            throw "A IA não carregou dentro do executável"
+          }
 
       - name: Gerar instalador (Inno Setup)
         shell: pwsh
@@ -90,6 +139,11 @@ jobs:
           & $iscc "/DAppVersion=$env:VERSION" packaging\installer.iss
           if ($LASTEXITCODE -ne 0) { throw "Falha no Inno Setup" }
           Compress-Archive -Path dist\FotoFaxina -DestinationPath "dist\FotoFaxina-portatil-$env:VERSION.zip"
+          # somas de verificação: quem baixa pode conferir que o arquivo é o original
+          Get-ChildItem dist\FotoFaxina-Setup-*.exe, dist\FotoFaxina-portatil-*.zip | ForEach-Object {
+            "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)"
+          } | Set-Content -Encoding ascii dist\SHA256SUMS.txt
+          Get-Content dist\SHA256SUMS.txt
 
       - name: Guardar arquivos do build
         uses: actions/upload-artifact@v4
@@ -98,6 +152,7 @@ jobs:
           path: |
             dist/FotoFaxina-Setup-*.exe
             dist/FotoFaxina-portatil-*.zip
+            dist/SHA256SUMS.txt
 
       - name: Publicar Release
         if: needs.versao.outputs.publicar == 'true'
@@ -110,15 +165,28 @@ jobs:
           files: |
             dist/FotoFaxina-Setup-*.exe
             dist/FotoFaxina-portatil-*.zip
+            dist/SHA256SUMS.txt
           body: |
-            ## Como instalar
+            ## 🇧🇷 Como instalar
             1. Baixe **FotoFaxina-Setup-${{ env.VERSION }}.exe** (abaixo, em Assets).
             2. Abra o arquivo. Se o Windows mostrar "O Windows protegeu o computador", clique em
-               **Mais informações → Executar assim mesmo** (o instalador não é assinado digitalmente).
+               **Mais informações → Executar assim mesmo** (o instalador ainda não tem assinatura digital).
             3. Avance até o fim. Não precisa de senha de administrador nem de Python.
             4. No FotoFaxina: **Conectar conta Google** → plugue o HD → confira → **Enviar**.
 
-            Primeira vez configurando o Google? Veja o
-            [passo a passo em português](https://github.com/${{ github.repository }}/blob/master/docs/CONFIGURAR-GOOGLE.md).
-
+            Primeira vez configurando o Google? [Passo a passo em português](https://github.com/${{ github.repository }}/blob/master/docs/CONFIGURAR-GOOGLE.md).
             Versão portátil (sem instalar): baixe o `.zip`, extraia e abra `FotoFaxina.exe`.
+
+            ## 🇺🇸 How to install
+            1. Download **FotoFaxina-Setup-${{ env.VERSION }}.exe** (below, under Assets).
+            2. Open it. If Windows shows "Windows protected your PC", click
+               **More info → Run anyway** (the installer is not digitally signed yet).
+            3. Click through to the end. No administrator password or Python needed.
+            4. In FotoFaxina: **Connect Google account** → plug in the drive → review → **Upload**.
+
+            First time setting up Google? [Step-by-step guide](https://github.com/${{ github.repository }}/blob/master/docs/GOOGLE-SETUP.md).
+
+            ---
+            🔒 O código é aberto e o instalador é gerado automaticamente pelo GitHub Actions a partir
+            deste repositório. Confira a integridade com o `SHA256SUMS.txt`. /
+            Open source, built automatically by GitHub Actions from this repository. Verify with `SHA256SUMS.txt`.
