@@ -60,7 +60,7 @@ def iter_media(root: str, ignore_dirs: list[str]):
         for name in filenames:
             ext = os.path.splitext(name)[1].lower()
             if ext in PHOTO_EXT or ext in VIDEO_EXT:
-                yield os.path.join(dirpath, name)
+                yield db.norm_path(os.path.join(dirpath, name))
 
 
 def sha256_of(path: str) -> str:
@@ -145,6 +145,7 @@ def scan(root: str, cfg, progress=None, log=None, stop=None) -> int:
     progress = progress or (lambda *a: None)
     log = log or (lambda *a: None)
     conn = db.connect()
+    root = db.norm_path(root)
     progress(_("Listando arquivos"), 0, 0, root)
     files = list(iter_media(root, cfg.ignore_dirs))
     total = len(files)

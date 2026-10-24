@@ -109,6 +109,16 @@ Para que ninguém fique dependente da sua conta, configure também no Google (um
 - **Compartilhamento com parceiro** no app Google Fotos: a outra pessoa recebe tudo
   automaticamente e pode salvar uma cópia na conta dela.
 
+## Histórico (esquecer registros)
+
+O FotoFaxina lembra o que já analisou e enviou para não repetir. Para refazer algo:
+- **Revisão → Esquecer selecionadas…**: só os itens marcados.
+- **Início → Esquecer esta pasta…**: todos os registros da pasta escolhida.
+- **Configurações → Limpar todo o histórico…**: começa do zero.
+
+Nada disso apaga arquivos do computador ou do Google Fotos. Depois de esquecer, o que já tinha
+sido enviado pode ser enviado de novo (ficando repetido no Google Fotos).
+
 ## Idioma
 
 O app abre no idioma do sistema (português ou inglês). Para trocar: Configurações →

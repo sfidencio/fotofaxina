@@ -52,6 +52,7 @@ class MainWindow(QMainWindow):
         self.inicio.upload.connect(self.start_upload)
         self.inicio.stop.connect(self.stop_job)
         self.inicio.retry_errors.connect(self.retry_errors)
+        self.inicio.forget_folder.connect(self.forget_folder)
         self.revisao.changed.connect(self.refresh_summary)
         self.albuns.regroup.connect(self.start_regroup)
         self.config_tab.connect_google.connect(self.start_connect)
@@ -229,6 +230,29 @@ class MainWindow(QMainWindow):
     def retry_errors(self):
         n = pipeline.tentar_erros_novamente()
         self.log(_("{n} itens com erro voltaram para a fila.").format(n=n))
+        self.refresh_summary()
+
+    def forget_folder(self):
+        if not self.root:
+            self.choose_folder()
+            if not self.root:
+                return
+        conn = db.connect()
+        ids = db.ids_under(conn, self.root)
+        if not ids:
+            conn.close()
+            QMessageBox.information(self, _("Esquecer"), _("Não há registros desta pasta no histórico."))
+            return
+        text = (_("Esquecer os {n} registros da pasta\n{pasta}?").format(n=len(ids), pasta=self.root)
+                + "\n\n" + _("Os arquivos no seu computador NÃO serão apagados, nem nada no Google Fotos. "
+              "O FotoFaxina só esquece o que sabe sobre eles: na próxima análise serão tratados como "
+              "novos, e o que já tinha sido enviado poderá ser enviado de novo (ficando repetido no "
+              "Google Fotos)."))
+        if QMessageBox.question(self, _("Esquecer"), text) == QMessageBox.Yes:
+            n = db.forget(conn, ids)
+            self.log(_("{n} registros desta pasta foram esquecidos. Clique em Analisar para começar do zero.")
+                     .format(n=n))
+        conn.close()
         self.refresh_summary()
 
     def choose_folder(self):

@@ -108,6 +108,16 @@ So nobody depends on your account, also set up in Google (one time):
 - **Partner sharing** in the Google Photos app: the other person receives everything
   automatically and can save a copy to their own account.
 
+## History (forgetting records)
+
+FotoFaxina remembers what it already analyzed and uploaded so nothing is repeated. To redo something:
+- **Review → Forget selected…**: only the selected items.
+- **Home → Forget this folder…**: every record of the chosen folder.
+- **Settings → Clear all history…**: start from scratch.
+
+None of this deletes files from your computer or from Google Photos. After forgetting, anything
+already uploaded may be uploaded again (appearing twice in Google Photos).
+
 ## Language
 
 The app opens in the system language (English or Portuguese). To change it: Settings →

@@ -36,6 +36,7 @@ class InicioTab(QWidget):
     upload = Signal()
     stop = Signal()
     retry_errors = Signal()
+    forget_folder = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -61,6 +62,10 @@ class InicioTab(QWidget):
         self.btn_upload = QPushButton(_("2. Enviar para o Google Fotos"))
         self.btn_stop = QPushButton(_("Parar"))
         self.btn_retry = QPushButton(_("Tentar erros de novo"))
+        self.btn_forget = QPushButton(_("Esquecer esta pasta…"))
+        self.btn_forget.setToolTip(_("Remove do histórico do FotoFaxina os registros da pasta escolhida "
+                                     "(não apaga nenhum arquivo)."))
+        self.btn_forget.clicked.connect(lambda: self.forget_folder.emit())
         self.btn_stop.setEnabled(False)
         for b, sig in ((self.btn_folder, self.choose_folder), (self.btn_analyze, self.analyze),
                        (self.btn_upload, self.upload), (self.btn_stop, self.stop),
@@ -71,6 +76,7 @@ class InicioTab(QWidget):
         for b in (self.btn_folder, self.btn_analyze, self.btn_upload, self.btn_stop):
             row.addWidget(b)
         row.addStretch()
+        row.addWidget(self.btn_forget)
         row.addWidget(self.btn_retry)
 
         self.stage_lbl = QLabel(_("Parado"))
@@ -96,7 +102,7 @@ class InicioTab(QWidget):
         lay.addWidget(self.logbox, 1)
 
     def set_busy(self, busy: bool):
-        for b in (self.btn_folder, self.btn_analyze, self.btn_upload, self.btn_retry):
+        for b in (self.btn_folder, self.btn_analyze, self.btn_upload, self.btn_retry, self.btn_forget):
             b.setEnabled(not busy)
         self.btn_stop.setEnabled(busy)
         if not busy:
@@ -180,6 +186,9 @@ class RevisaoTab(QWidget):
         for k in CATEGORIES:
             self.move_combo.addItem(cat_label(k), k)
         btn_move = QPushButton(_("Mudar categoria"))
+        btn_forget = QPushButton(_("Esquecer selecionadas…"))
+        btn_forget.setToolTip(_("Remove os itens do histórico do FotoFaxina (não apaga nenhum arquivo)."))
+        btn_forget.clicked.connect(self._forget_selected)
         btn_send.clicked.connect(lambda: self._set_decision("upload"))
         btn_skip.clicked.connect(lambda: self._set_decision("skip"))
         btn_auto.clicked.connect(lambda: self._set_decision(None))
@@ -189,6 +198,7 @@ class RevisaoTab(QWidget):
         for w in (btn_send, btn_skip, btn_auto, QLabel(" | "), self.move_combo, btn_move):
             bottom.addWidget(w)
         bottom.addStretch()
+        bottom.addWidget(btn_forget)
         bottom.addWidget(self.btn_more)
 
         hint = QLabel(_("Dica: Ctrl/Shift para selecionar várias. Duplo clique abre o arquivo."))
@@ -321,6 +331,22 @@ class RevisaoTab(QWidget):
             [(cat, i) for i in ids],
         )
         conn.commit()
+        conn.close()
+        self.reload()
+        self.changed.emit()
+
+    def _forget_selected(self):
+        ids = self._selected_ids()
+        if not ids:
+            return
+        text = _("Esquecer {n} item(ns)?").format(n=len(ids)) + "\n\n" + _("Os arquivos no seu computador NÃO serão apagados, nem nada no Google Fotos. "
+              "O FotoFaxina só esquece o que sabe sobre eles: na próxima análise serão tratados como "
+              "novos, e o que já tinha sido enviado poderá ser enviado de novo (ficando repetido no "
+              "Google Fotos).")
+        if QMessageBox.question(self, _("Esquecer"), text) != QMessageBox.Yes:
+            return
+        conn = db.connect()
+        db.forget(conn, ids)
         conn.close()
         self.reload()
         self.changed.emit()
@@ -530,6 +556,16 @@ class ConfigTab(QWidget):
         gl.addWidget(self.acc_lbl)
         gl.addLayout(row)
 
+        hist = QGroupBox(_("Histórico do FotoFaxina"))
+        hl = QHBoxLayout(hist)
+        hist_lbl = QLabel(_("O FotoFaxina guarda o que já analisou e enviou para não repetir. "
+                            "Limpar faz ele começar do zero (os arquivos não são apagados)."))
+        hist_lbl.setWordWrap(True)
+        btn_clear = QPushButton(_("Limpar todo o histórico…"))
+        btn_clear.clicked.connect(self._forget_all)
+        hl.addWidget(hist_lbl, 1)
+        hl.addWidget(btn_clear)
+
         save = QPushButton(_("Salvar configurações"))
         save.clicked.connect(self._save)
 
@@ -543,6 +579,7 @@ class ConfigTab(QWidget):
         top.addWidget(auto, 1)
         lay.addLayout(top)
         lay.addWidget(acc)
+        lay.addWidget(hist)
         lay.addStretch()
         lay.addWidget(save, 0, Qt.AlignRight)
         self.load()
@@ -599,6 +636,20 @@ class ConfigTab(QWidget):
                 _("Falta a credencial do Google (uma vez só, ~10 min).")
                 + f' <a href="{guide_url()}">' + _("Veja o passo a passo") + "</a>."
             )
+
+    def _forget_all(self):
+        text = _("Limpar TODO o histórico (todas as pastas e álbuns)?") + "\n\n" + _("Os arquivos no seu computador NÃO serão apagados, nem nada no Google Fotos. "
+              "O FotoFaxina só esquece o que sabe sobre eles: na próxima análise serão tratados como "
+              "novos, e o que já tinha sido enviado poderá ser enviado de novo (ficando repetido no "
+              "Google Fotos).")
+        if QMessageBox.question(self, _("Limpar histórico"), text) != QMessageBox.Yes:
+            return
+        conn = db.connect()
+        n = db.forget_all(conn)
+        conn.close()
+        QMessageBox.information(self, _("Limpar histórico"),
+                                _("{n} registros removidos. Seus arquivos continuam onde estavam.").format(n=n))
+        self.saved.emit()
 
     def _pick_secret(self):
         path, _filter = QFileDialog.getOpenFileName(self, "client_secret.json", "", "JSON (*.json)")

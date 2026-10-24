@@ -210,6 +210,32 @@ EN: dict[str, str] = {
     "Modelo de IA não encontrado nesta instalação — usando só as regras. Clique abaixo para baixar.":
         "AI model not found in this installation — using rules only. Click below to download it.",
     "Inteligência artificial": "Artificial intelligence",
+    "Os arquivos no seu computador NÃO serão apagados, nem nada no Google Fotos. O FotoFaxina só esquece o que sabe sobre eles: na próxima análise serão tratados como novos, e o que já tinha sido enviado poderá ser enviado de novo (ficando repetido no Google Fotos).":
+        "The files on your computer will NOT be deleted, and nothing in Google Photos either. FotoFaxina only "
+        "forgets what it knows about them: on the next analysis they will be treated as new, and anything "
+        "already uploaded may be uploaded again (appearing twice in Google Photos).",
+    "Esquecer esta pasta…": "Forget this folder…",
+    "Remove do histórico do FotoFaxina os registros da pasta escolhida (não apaga nenhum arquivo).":
+        "Removes the chosen folder's records from FotoFaxina's history (no file is deleted).",
+    "Esquecer selecionadas…": "Forget selected…",
+    "Remove os itens do histórico do FotoFaxina (não apaga nenhum arquivo).":
+        "Removes the items from FotoFaxina's history (no file is deleted).",
+    "Esquecer {n} item(ns)?": "Forget {n} item(s)?",
+    "Esquecer": "Forget",
+    "Histórico do FotoFaxina": "FotoFaxina history",
+    "O FotoFaxina guarda o que já analisou e enviou para não repetir. Limpar faz ele começar do zero (os arquivos não são apagados).":
+        "FotoFaxina remembers what it already analyzed and uploaded so nothing is repeated. Clearing makes it "
+        "start from scratch (files are not deleted).",
+    "Limpar todo o histórico…": "Clear all history…",
+    "Limpar TODO o histórico (todas as pastas e álbuns)?": "Clear ALL history (every folder and album)?",
+    "Limpar histórico": "Clear history",
+    "{n} registros removidos. Seus arquivos continuam onde estavam.": "{n} records removed. Your files are still where they were.",
+    "Não há registros desta pasta no histórico.": "There are no records of this folder in the history.",
+    "Esquecer os {n} registros da pasta\n{pasta}?": "Forget the {n} records of the folder\n{pasta}?",
+    "{n} registros desta pasta foram esquecidos. Clique em Analisar para começar do zero.":
+        "{n} records of this folder were forgotten. Click Analyze to start from scratch.",
+    "O álbum “{titulo}” não existe mais no Google Fotos; criando de novo.":
+        "The album “{titulo}” no longer exists in Google Photos; creating it again.",
     "Falta o componente que executa a IA. No terminal, rode <b>pip install -r requirements.txt</b> e abra o FotoFaxina de novo.":
         "The component that runs the AI is missing. In a terminal, run <b>pip install -r requirements.txt</b> "
         "and open FotoFaxina again.",

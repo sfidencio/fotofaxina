@@ -5,7 +5,7 @@ import os
 
 from . import classifier, db, grouper, scanner
 from .config import Config, wants_upload
-from .google_photos import BATCH_LIMIT, GooglePhotos, QuotaExceeded
+from .google_photos import BATCH_LIMIT, GooglePhotos, GooglePhotosError, QuotaExceeded
 from .i18n import _
 
 
@@ -31,9 +31,9 @@ def processar(root: str, cfg: Config, progress=_noop, log=_noop, stop=None) -> d
 
 def folder_summary(conn, root: str, cfg: Config) -> dict:
     """O que aconteceu com os arquivos DESTA pasta (o resumo geral mistura todas as análises)."""
-    prefix = os.path.join(os.path.normpath(root), "")
+    prefix = os.path.join(db.path_key(root), "")
     rows = [r for r in conn.execute("SELECT * FROM photos").fetchall()
-            if os.path.normpath(r["path"]).startswith(prefix)]
+            if db.path_key(r["path"]).startswith(prefix)]
     by_id = {r["id"]: r for r in conn.execute("SELECT id, path, media_item_id FROM photos")}
     out = {"total": len(rows), "ja_no_google": 0, "repetidas": 0, "a_enviar": 0, "fora": 0}
     for r in rows:
@@ -144,7 +144,18 @@ def enviar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
                     novos_albuns.append(album["title"])
                     conn.commit()
                     log(_("Álbum criado: {titulo}").format(titulo=album["title"]))
-                results = gp.batch_create(album_id, pairs)
+                try:
+                    results = gp.batch_create(album_id, pairs)
+                except GooglePhotosError as e:
+                    # álbum apagado no Google Fotos (ou de outra conta): cria de novo e tenta mais uma vez
+                    if "album" not in str(e).lower():
+                        raise
+                    log(_("O álbum “{titulo}” não existe mais no Google Fotos; criando de novo.").format(
+                        titulo=album["title"]))
+                    album_id, url = gp.create_album(album["title"])
+                    conn.execute("UPDATE albums SET google_id=?, product_url=? WHERE key=?", (album_id, url, key))
+                    conn.commit()
+                    results = gp.batch_create(album_id, pairs)
                 for tok, photo_id in tokens.items():
                     ok, val = results.get(tok, (False, _("sem resposta do Google")))
                     if ok:
