@@ -69,6 +69,7 @@ def enviar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
     log(f"{total} itens para enviar")
     enviados = erros = 0
     done = 0
+    novos_albuns: list[str] = []
 
     by_album: dict[str, list] = {}
     for r in rows:
@@ -113,10 +114,12 @@ def enviar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
                     conn.commit()
                     continue
                 if not album_id:
-                    album_id = gp.create_album(album["title"])
+                    album_id, url = gp.create_album(album["title"])
                     conn.execute(
-                        "UPDATE albums SET google_id=?, pending_rename=0 WHERE key=?", (album_id, key)
+                        "UPDATE albums SET google_id=?, product_url=?, pending_rename=0 WHERE key=?",
+                        (album_id, url, key),
                     )
+                    novos_albuns.append(album["title"])
                     conn.commit()
                     log(f"Álbum criado: {album['title']}")
                 results = gp.batch_create(album_id, pairs)
@@ -141,10 +144,14 @@ def enviar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
         conn.commit()
 
     log(f"Envio concluído: {enviados} enviados, {erros} com erro")
+    if novos_albuns:
+        log(f"Álbuns novos: {', '.join(novos_albuns)}. Para compartilhar, use a aba Álbuns → "
+            "“Abrir no Google Fotos para compartilhar”.")
     res = db.summary(conn, cfg)
     conn.close()
     res["enviados_agora"] = enviados
     res["erros_agora"] = erros
+    res["albuns_novos"] = novos_albuns
     return res
 
 

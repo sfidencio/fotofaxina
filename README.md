@@ -90,6 +90,20 @@ O Google exige que cada app tenha uma credencial própria:
 - Existe um **limite diário de requisições**. Se for atingido, o app avisa e para;
   no dia seguinte, clique em Enviar e ele continua de onde parou.
 
+## Compartilhar álbuns e garantir acesso da família
+
+Desde 31/03/2025 a API do Google não permite mais compartilhar álbuns por programa. Por isso o
+FotoFaxina faz o caminho mais curto: na aba **Álbuns**, selecione um álbum já enviado e clique em
+**Abrir no Google Fotos para compartilhar** → no navegador, **Compartilhar** → digite os e-mails.
+Com álbuns por ano, são poucos cliques por ano; fotos enviadas depois para o mesmo álbum
+aparecem automaticamente para quem já foi adicionado.
+
+Para que ninguém fique dependente da sua conta, configure também no Google (uma vez só):
+- **Gerenciador de contas inativas** (myaccount.google.com → Dados e privacidade): até 10 pessoas
+  recebem o link para baixar suas fotos se a conta ficar inativa pelo prazo que você escolher.
+- **Compartilhamento com parceiro** no app Google Fotos: a outra pessoa recebe tudo
+  automaticamente e pode salvar uma cópia na conta dela.
+
 ## Uso no dia a dia
 
 - **Iniciar com o sistema, minimizado na bandeja**: `python main.py --minimizado`

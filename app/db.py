@@ -43,7 +43,8 @@ CREATE TABLE IF NOT EXISTS albums(
     end            TEXT,
     google_id      TEXT,
     custom_title   INTEGER DEFAULT 0,
-    pending_rename INTEGER DEFAULT 0
+    pending_rename INTEGER DEFAULT 0,
+    product_url    TEXT
 );
 """
 
@@ -55,7 +56,25 @@ def connect() -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=NORMAL")
     conn.executescript(SCHEMA)
+    _migrate(conn)
     return conn
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Acrescenta colunas novas em bancos criados por versões anteriores."""
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(albums)")}
+    if "product_url" not in cols:
+        conn.execute("ALTER TABLE albums ADD COLUMN product_url TEXT")
+        conn.commit()
+
+
+def album_url(row) -> str | None:
+    """Link do álbum no Google Fotos (o que a API devolveu ou o formato padrão)."""
+    if row["product_url"]:
+        return row["product_url"]
+    if row["google_id"]:
+        return f"https://photos.google.com/lr/album/{row['google_id']}"
+    return None
 
 
 def summary(conn: sqlite3.Connection, cfg) -> dict:

@@ -312,9 +312,23 @@ class AlbunsTab(QWidget):
         for c in (1, 2, 3):
             self.table.horizontalHeader().setSectionResizeMode(c, QHeaderView.ResizeToContents)
         self.table.verticalHeader().setVisible(False)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.table.itemChanged.connect(self._renamed)
+        self.table.itemSelectionChanged.connect(self._selection_changed)
+        self.urls: dict[str, str | None] = {}
+
+        self.btn_share = QPushButton("Abrir no Google Fotos para compartilhar")
+        self.btn_share.setEnabled(False)
+        self.btn_share.clicked.connect(self._open_album)
         btn = QPushButton("Reagrupar (após mudar configurações)")
         btn.clicked.connect(lambda: self.regroup.emit())
+        share_hint = QLabel(
+            "Para compartilhar: selecione um álbum já enviado → “Abrir no Google Fotos para "
+            "compartilhar” → no navegador, clique em <b>Compartilhar</b> e digite os e-mails. "
+            "Quem você adicionar recebe as fotos novas que forem para esse álbum depois."
+        )
+        share_hint.setWordWrap(True)
         hint = QLabel("Os álbuns são criados no Google Fotos só no envio. Renomeie à vontade antes — "
                       "ex.: “Evento 24 a 26/12/2023” → “Natal 2023”.")
         hint.setWordWrap(True)
@@ -322,7 +336,29 @@ class AlbunsTab(QWidget):
         lay = QVBoxLayout(self)
         lay.addWidget(hint)
         lay.addWidget(self.table, 1)
-        lay.addWidget(btn, 0, Qt.AlignRight)
+        lay.addWidget(share_hint)
+        row = QHBoxLayout()
+        row.addWidget(self.btn_share)
+        row.addStretch()
+        row.addWidget(btn)
+        lay.addLayout(row)
+
+    def _selected_key(self) -> str | None:
+        items = self.table.selectedItems()
+        if not items:
+            return None
+        return self.table.item(items[0].row(), 0).data(Qt.UserRole)
+
+    def _selection_changed(self):
+        key = self._selected_key()
+        url = self.urls.get(key) if key else None
+        self.btn_share.setEnabled(bool(url))
+        self.btn_share.setToolTip("" if url else "Este álbum ainda não foi enviado ao Google Fotos.")
+
+    def _open_album(self):
+        url = self.urls.get(self._selected_key() or "")
+        if url:
+            QDesktopServices.openUrl(QUrl(url))
 
     def reload(self):
         conn = db.connect()
@@ -331,6 +367,7 @@ class AlbunsTab(QWidget):
             "FROM albums a LEFT JOIN photos p ON p.album_key=a.key GROUP BY a.key ORDER BY a.start DESC"
         ).fetchall()
         conn.close()
+        self.urls = {r["key"]: db.album_url(r) for r in rows}
         self.table.blockSignals(True)
         self.table.setRowCount(len(rows))
         for i, r in enumerate(rows):
@@ -345,6 +382,7 @@ class AlbunsTab(QWidget):
                 item.setFlags(item.flags() & ~Qt.ItemIsEditable)
                 self.table.setItem(i, c, item)
         self.table.blockSignals(False)
+        self._selection_changed()
 
     def _renamed(self, item: QTableWidgetItem):
         if item.column() != 0:

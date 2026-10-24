@@ -128,9 +128,11 @@ class GooglePhotos:
         resp = self._request("POST", f"{API}/uploads", body_path=path, headers=headers)
         return resp.text.strip()
 
-    def create_album(self, title: str) -> str:
+    def create_album(self, title: str) -> tuple[str, str | None]:
+        """Cria o álbum e devolve (id, link para abrir no Google Fotos)."""
         resp = self._request("POST", f"{API}/albums", json={"album": {"title": title[:500]}})
-        return resp.json()["id"]
+        data = resp.json()
+        return data["id"], data.get("productUrl")
 
     def rename_album(self, album_id: str, title: str) -> None:
         self._request(
