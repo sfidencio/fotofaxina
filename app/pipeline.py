@@ -24,8 +24,29 @@ def processar(root: str, cfg: Config, progress=_noop, log=_noop, stop=None) -> d
     grouper.group(cfg, log)
     conn = db.connect()
     res = db.summary(conn, cfg)
+    res["pasta"] = folder_summary(conn, root, cfg)
     conn.close()
     return res
+
+
+def folder_summary(conn, root: str, cfg: Config) -> dict:
+    """O que aconteceu com os arquivos DESTA pasta (o resumo geral mistura todas as análises)."""
+    prefix = os.path.join(os.path.normpath(root), "")
+    rows = [r for r in conn.execute("SELECT * FROM photos").fetchall()
+            if os.path.normpath(r["path"]).startswith(prefix)]
+    by_id = {r["id"]: r for r in conn.execute("SELECT id, path, media_item_id FROM photos")}
+    out = {"total": len(rows), "ja_no_google": 0, "repetidas": 0, "a_enviar": 0, "fora": 0}
+    for r in rows:
+        keeper = by_id.get(r["duplicate_of"]) if r["duplicate_of"] is not None else None
+        if r["media_item_id"] or (keeper is not None and keeper["media_item_id"]):
+            out["ja_no_google"] += 1
+        elif keeper is not None:
+            out["repetidas"] += 1
+        elif r["status"] == "classified" and wants_upload(r, cfg):
+            out["a_enviar"] += 1
+        else:
+            out["fora"] += 1
+    return out
 
 
 def reagrupar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:

@@ -55,6 +55,8 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: python tests/test_origem_intocada.py
+      - name: Duplicatas quando a pasta original foi apagada
+        run: python tests/test_duplicata_original_apagado.py
 
   # Gera a IA leve (CLIP -> ONNX int8). Fica em cache enquanto as frases/script não mudarem.
   modelo:

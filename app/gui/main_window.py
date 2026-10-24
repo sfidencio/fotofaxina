@@ -158,8 +158,15 @@ class MainWindow(QMainWindow):
         self._clear_job()
         if name == "analisar":
             if isinstance(res, dict) and not res.get("parado"):
+                p = res.get("pasta") or {}
                 msg = _("{n} itens prontos para enviar ({dup} duplicados ignorados).").format(
                     n=res["a_enviar"], dup=res["duplicadas"])
+                if p:
+                    self.log(_("Nesta pasta: {total} arquivos — {novas} para enviar, {google} já estão no "
+                               "Google Fotos, {rep} repetidos de fotos que ainda vão ser enviadas, "
+                               "{fora} fora dos critérios (memes, prints…).").format(
+                        total=p["total"], novas=p["a_enviar"], google=p["ja_no_google"],
+                        rep=p["repetidas"], fora=p["fora"]))
                 self.log(_("Análise concluída.") + " " + msg)
                 self.notify(_("Análise concluída"), msg)
                 if self.cfg.auto_upload and TOKEN_PATH.exists():

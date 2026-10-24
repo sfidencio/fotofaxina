@@ -137,6 +137,7 @@ class RevisaoTab(QWidget):
         self.rows: list = []
         self.shown = 0
         self._thumb_jobs: list[ThumbJob] = []
+        self.originals: dict[int, tuple[str, bool]] = {}
 
         self.cat_combo = QComboBox()
         self.cat_combo.addItem(_("Todas as categorias"), None)
@@ -237,6 +238,8 @@ class RevisaoTab(QWidget):
             rows = conn.execute(
                 "SELECT * FROM photos WHERE duplicate_of IS NULL ORDER BY taken_at"
             ).fetchall()
+        self.originals = {r["id"]: (r["path"], bool(r["media_item_id"]))
+                          for r in conn.execute("SELECT id, path, media_item_id FROM photos")}
         conn.close()
         self.rows = rows if cat == "__dup" else [r for r in rows if self._matches(r)]
         self.shown = 0
@@ -268,6 +271,10 @@ class RevisaoTab(QWidget):
                 tip.append(_("Câmera: {camera}").format(camera=r["camera"]))
             if r["error"]:
                 tip.append(_("Erro: {erro}").format(erro=r["error"]))
+            if r["duplicate_of"] is not None and r["duplicate_of"] in self.originals:
+                orig, sent = self.originals[r["duplicate_of"]]
+                tip.append(_("Duplicata de: {arquivo}").format(arquivo=orig)
+                           + (" " + _("(já está no Google Fotos)") if sent else ""))
             it.setToolTip("\n".join(tip))
             self.list.addItem(it)
             self.items_by_id[r["id"]] = it

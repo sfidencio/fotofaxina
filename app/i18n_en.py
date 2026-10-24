@@ -19,7 +19,11 @@ EN: dict[str, str] = {
     "Listando arquivos": "Listing files",
     "{n} fotos/vídeos encontrados em {pasta}": "{n} photos/videos found in {pasta}",
     "Lendo arquivos": "Reading files",
-    "{novos} arquivos novos; {dup} duplicatas no total": "{novos} new files; {dup} duplicates in total",
+    "{novos} arquivos novos; {dup} duplicatas no total (somando todas as pastas já analisadas)":
+        "{novos} new files; {dup} duplicates in total (across all folders analyzed so far)",
+    "Nesta pasta: {total} arquivos — {novas} para enviar, {google} já estão no Google Fotos, {rep} repetidos de fotos que ainda vão ser enviadas, {fora} fora dos critérios (memes, prints…).":
+        "In this folder: {total} files — {novas} to upload, {google} already in Google Photos, {rep} repeats of "
+        "photos still to be uploaded, {fora} outside the criteria (memes, screenshots…).",
     "Não consegui ler {arquivo}: {erro}": "Could not read {arquivo}: {erro}",
     "Classificando": "Classifying",
     "Classificando {n} arquivos...": "Classifying {n} files...",
@@ -138,6 +142,8 @@ EN: dict[str, str] = {
     "Data: {data} ({fonte})": "Date: {data} ({fonte})",
     "Câmera: {camera}": "Camera: {camera}",
     "Erro: {erro}": "Error: {erro}",
+    "Duplicata de: {arquivo}": "Duplicate of: {arquivo}",
+    "(já está no Google Fotos)": "(already in Google Photos)",
     "{n} de {total}": "{n} of {total}",
 
     # aba Álbuns

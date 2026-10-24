@@ -196,7 +196,8 @@ def scan(root: str, cfg, progress=None, log=None, stop=None) -> int:
             conn.commit()
     conn.commit()
     dups = mark_duplicates(conn)
-    log(_("{novos} arquivos novos; {dup} duplicatas no total").format(novos=novos, dup=dups))
+    log(_("{novos} arquivos novos; {dup} duplicatas no total (somando todas as pastas já analisadas)").format(
+        novos=novos, dup=dups))
     conn.close()
     return novos
 
@@ -205,6 +206,9 @@ def _keeper_score(r) -> tuple:
     area = (r["width"] or 0) * (r["height"] or 0)
     return (
         1 if r["media_item_id"] else 0,
+        # o original precisa existir: se a pasta analisada antes foi apagada/movida, a cópia que
+        # ainda está no disco vira o original (senão nada seria enviado)
+        1 if os.path.exists(r["path"]) else 0,
         1 if r["source"] == "camera" else 0,
         area,
         r["size"] or 0,
@@ -216,7 +220,7 @@ def mark_duplicates(conn) -> int:
     """Duplicata exata (mesmo SHA-256) ou quase-duplicata (mesmo hash perceptual)."""
     conn.execute("UPDATE photos SET duplicate_of=NULL WHERE media_item_id IS NULL")
     rows = conn.execute(
-        "SELECT id, sha256, phash, width, height, size, source, media_item_id, is_video FROM photos"
+        "SELECT id, path, sha256, phash, width, height, size, source, media_item_id, is_video FROM photos"
     ).fetchall()
 
     def resolve(groups):
@@ -246,5 +250,10 @@ def mark_duplicates(conn) -> int:
             continue
         by_phash.setdefault(r["phash"], []).append(r)
     total += resolve(by_phash)
+    # quem deixou de ser duplicata e nunca foi classificado (duplicatas pulam a IA) volta para a fila
+    conn.execute(
+        "UPDATE photos SET status='scanned' WHERE duplicate_of IS NULL AND category IS NULL "
+        "AND media_item_id IS NULL AND status='classified'"
+    )
     conn.commit()
     return total
