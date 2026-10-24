@@ -14,6 +14,16 @@ photos apart from memes, screenshots, stickers and documents, removes duplicates
 (by event, month or year) and uploads them to Google Photos. Available in English and Portuguese,
 on Windows (installer), Linux and macOS.
 
+## Screenshots
+
+| Home | Review |
+|---|---|
+| ![Home](screen-home.png) | ![Review](screen-review.png) |
+| **Albums** | **Settings** |
+| ![Albums](screen-albums.png) | ![Settings](screen-settings.png) |
+
+<p align="center"><img src="screen-welcome.png" alt="Welcome" width="400"></p>
+
 ## Install (end users)
 
 1. Go to **[Releases](https://github.com/sfidencio/fotofaxina/releases/latest)** and download

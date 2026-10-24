@@ -13,6 +13,16 @@ O FotoFaxina faz a faxina nas fotos do seu HD: separa o que é foto de verdade d
 print, figurinha e documento, remove duplicadas, monta álbuns (por evento, mês ou ano) e envia
 para o Google Fotos. Funciona em português e inglês, no Windows (instalador), Linux e macOS.
 
+## Telas
+
+| Início | Revisão |
+|---|---|
+| ![Início](tela-inicio.png) | ![Revisão](tela-revisao.png) |
+| **Álbuns** | **Configurações** |
+| ![Álbuns](tela-albuns.png) | ![Configurações](tela-configuracoes.png) |
+
+<p align="center"><img src="tela-boas-vindas.png" alt="Boas-vindas" width="400"></p>
+
 ## Instalar (usuário final)
 
 1. Vá em **[Releases](https://github.com/sfidencio/fotofaxina/releases/latest)** e baixe
