@@ -432,6 +432,7 @@ class AlbunsTab(QWidget):
 class ConfigTab(QWidget):
     saved = Signal()
     connect_google = Signal()
+    download_ai = Signal()
 
     def __init__(self, cfg: Config, parent=None):
         super().__init__(parent)
@@ -463,6 +464,9 @@ class ConfigTab(QWidget):
         il.addRow(self.ai_cam_check)
         il.addRow(_("Confiança mínima da IA:"), self.conf_spin)
         il.addRow(self.ai_status)
+        self.btn_ai = QPushButton(_("Baixar modelo de IA (~96 MB)"))
+        self.btn_ai.clicked.connect(lambda: self.download_ai.emit())
+        il.addRow(self.btn_ai)
 
         proc = QGroupBox(_("Álbuns"))
         fl = QFormLayout(proc)
@@ -554,12 +558,17 @@ class ConfigTab(QWidget):
         self.upload_check.setChecked(c.auto_upload)
         self.startup_check.setChecked(autostart.is_enabled())
         self.lang_combo.setCurrentIndex(max(0, self.lang_combo.findData(c.language)))
-        self.ai_status.setText(
-            _("IA pronta: modelo leve embutido, roda no processador, sem placa de vídeo.")
-            if classifier.ai_available()
-            else _("Modelo de IA não encontrado nesta instalação — usando só as regras.")
-        )
+        self.refresh_ai()
         self.refresh_account()
+
+    def refresh_ai(self):
+        ok = classifier.ai_available()
+        self.ai_status.setText(
+            _("IA pronta: modelo leve embutido, roda no processador, sem placa de vídeo.") if ok
+            else _("Modelo de IA não encontrado nesta instalação — usando só as regras. "
+                   "Clique abaixo para baixar.")
+        )
+        self.btn_ai.setVisible(not ok)
 
     def _mode_changed(self):
         mode = self.mode_combo.currentData()

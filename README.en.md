@@ -158,7 +158,9 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Without the `models/` folder the app runs with rules only. To build the AI locally (once):
+Without the model the app runs with rules only. The easiest way to get the AI when running from
+source is **Settings → Download AI model** (or `python main.py --baixar-ia`): it downloads the
+ready-made model from the latest release (~96 MB) into `~/.fotofaxina/models`. To build it yourself:
 
 ```bash
 pip install torch --index-url https://download.pytorch.org/whl/cpu

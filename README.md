@@ -159,7 +159,9 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Sem a pasta `models/` o app funciona só com as regras. Para gerar a IA localmente (uma vez):
+Sem o modelo o app funciona só com as regras. Para ter a IA rodando pelo código, o mais fácil é
+**Configurações → Baixar modelo de IA** (ou `python main.py --baixar-ia`): baixa o modelo pronto
+da última versão (~96 MB) para `~/.fotofaxina/models`. Para gerar o modelo você mesmo:
 
 ```bash
 pip install torch --index-url https://download.pytorch.org/whl/cpu

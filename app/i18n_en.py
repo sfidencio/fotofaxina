@@ -166,8 +166,6 @@ EN: dict[str, str] = {
     "Confiança mínima da IA:": "AI minimum confidence:",
     "IA pronta: modelo leve embutido, roda no processador, sem placa de vídeo.":
         "AI ready: lightweight built-in model, runs on the CPU, no graphics card needed.",
-    "Modelo de IA não encontrado nesta instalação — usando só as regras.":
-        "AI model not found in this installation — using rules only.",
     "Por evento (fotos próximas no tempo)": "By event (photos close in time)",
     "Por mês": "By month",
     "Por ano": "By year",
@@ -195,6 +193,17 @@ EN: dict[str, str] = {
     "Veja o passo a passo": "See the step-by-step guide",
     "Não consegui alterar a inicialização: {erro}": "Could not change the startup setting: {erro}",
     "Salvo. Use “Reagrupar” na aba Álbuns para aplicar.": "Saved. Use “Regroup” in the Albums tab to apply.",
+    "Baixando modelo de IA": "Downloading AI model",
+    "Baixando o modelo de IA (~96 MB)…": "Downloading the AI model (~96 MB)…",
+    "Download cancelado.": "Download cancelled.",
+    "Arquivo do modelo incompleto: falta {nome}.": "Incomplete model file: {nome} is missing.",
+    "Modelo de IA instalado.": "AI model installed.",
+    "Baixar modelo de IA (~96 MB)": "Download AI model (~96 MB)",
+    "Modelo de IA não encontrado nesta instalação — usando só as regras. Clique abaixo para baixar.":
+        "AI model not found in this installation — using rules only. Click below to download it.",
+    "Inteligência artificial": "Artificial intelligence",
+    "Modelo de IA instalado. Na próxima análise ele já será usado.":
+        "AI model installed. It will be used in the next analysis.",
     "O novo idioma vale a partir da próxima vez que o FotoFaxina for aberto.":
         "The new language takes effect the next time FotoFaxina is opened.",
 }

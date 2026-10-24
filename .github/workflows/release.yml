@@ -159,8 +159,10 @@ jobs:
           & $iscc "/DAppVersion=$env:VERSION" packaging\installer.iss
           if ($LASTEXITCODE -ne 0) { throw "Falha no Inno Setup" }
           Compress-Archive -Path dist\FotoFaxina -DestinationPath "dist\FotoFaxina-portatil-$env:VERSION.zip"
+          # modelo de IA avulso: o botão "Baixar modelo de IA" do app (quem roda pelo código) usa este arquivo
+          Compress-Archive -Path models -DestinationPath "dist\fotofaxina-ia-modelo.zip"
           # somas de verificação: quem baixa pode conferir que o arquivo é o original
-          Get-ChildItem dist\FotoFaxina-Setup-*.exe, dist\FotoFaxina-portatil-*.zip | ForEach-Object {
+          Get-ChildItem dist\FotoFaxina-Setup-*.exe, dist\FotoFaxina-portatil-*.zip, dist\fotofaxina-ia-modelo.zip | ForEach-Object {
             "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)"
           } | Set-Content -Encoding ascii dist\SHA256SUMS.txt
           Get-Content dist\SHA256SUMS.txt
@@ -172,6 +174,7 @@ jobs:
           path: |
             dist/FotoFaxina-Setup-*.exe
             dist/FotoFaxina-portatil-*.zip
+            dist/fotofaxina-ia-modelo.zip
             dist/SHA256SUMS.txt
 
       - name: Publicar Release
@@ -185,6 +188,7 @@ jobs:
           files: |
             dist/FotoFaxina-Setup-*.exe
             dist/FotoFaxina-portatil-*.zip
+            dist/fotofaxina-ia-modelo.zip
             dist/SHA256SUMS.txt
           body: |
             ## 🇧🇷 Como instalar

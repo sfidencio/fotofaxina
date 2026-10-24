@@ -55,6 +55,7 @@ class MainWindow(QMainWindow):
         self.revisao.changed.connect(self.refresh_summary)
         self.albuns.regroup.connect(self.start_regroup)
         self.config_tab.connect_google.connect(self.start_connect)
+        self.config_tab.download_ai.connect(self.start_download_ai)
         self.config_tab.saved.connect(self.refresh_summary)
 
         # bandeja
@@ -173,6 +174,11 @@ class MainWindow(QMainWindow):
             self.notify(_("Envio concluído"), msg)
         elif name == "conectar":
             QMessageBox.information(self, _("Google Fotos"), _("Conta conectada com sucesso!"))
+        elif name == "baixar_ia":
+            self.config_tab.refresh_ai()
+            if res:
+                QMessageBox.information(self, _("Inteligência artificial"),
+                                        _("Modelo de IA instalado. Na próxima análise ele já será usado."))
         elif name == "reagrupar":
             self.albuns.reload()
 
@@ -201,6 +207,12 @@ class MainWindow(QMainWindow):
     def start_connect(self):
         self.log(_("Abrindo o navegador para login no Google…"))
         self._run("conectar", pipeline.conectar_google)
+
+    def start_download_ai(self):
+        from .. import model_download
+
+        self.tabs.setCurrentWidget(self.inicio)
+        self._run("baixar_ia", model_download.download_model)
 
     def stop_job(self):
         if self.job is not None:

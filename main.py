@@ -32,6 +32,11 @@ def run_cli(folder: str) -> None:
 
 
 def main() -> None:
+    if "--baixar-ia" in sys.argv:
+        from app import model_download
+
+        model_download.download_model(log=print)
+        return
     if "--cli" in sys.argv:
         run_cli(sys.argv[sys.argv.index("--cli") + 1])
         return

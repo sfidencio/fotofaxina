@@ -143,6 +143,13 @@ _clip: OnnxClip | None = None
 _clip_error: str | None = None
 
 
+def reset() -> None:
+    """Esquece o modelo carregado (ex.: depois de baixar um novo)."""
+    global _clip, _clip_error
+    _clip = None
+    _clip_error = None
+
+
 def get_clip(log) -> OnnxClip | None:
     global _clip, _clip_error
     if _clip is not None or _clip_error is not None:
