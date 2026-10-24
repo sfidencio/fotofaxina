@@ -39,6 +39,23 @@ jobs:
             echo "publicar=true" >> "$GITHUB_OUTPUT"
           fi
 
+  # Roda em todo push: traduções completas e garantia de que o HD do usuário nunca é alterado.
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Conferir traduções
+        run: python packaging/check_i18n.py
+      - name: Arquivos de origem nunca são alterados, movidos ou apagados
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python tests/test_origem_intocada.py
+
   # Gera a IA leve (CLIP -> ONNX int8). Fica em cache enquanto as frases/script não mudarem.
   modelo:
     needs: versao
@@ -68,7 +85,7 @@ jobs:
           retention-days: 7
 
   windows:
-    needs: [versao, modelo]
+    needs: [versao, modelo, testes]
     runs-on: windows-latest
     env:
       VERSION: ${{ needs.versao.outputs.version }}
@@ -104,6 +121,9 @@ jobs:
 
       - name: Conferir traduções
         run: python packaging/check_i18n.py
+
+      - name: Arquivos de origem nunca são alterados (no Windows)
+        run: python tests/test_origem_intocada.py
 
       - name: Gravar versão no app
         shell: pwsh

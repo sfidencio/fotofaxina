@@ -27,6 +27,11 @@ Para desinstalar: Configurações do Windows → Aplicativos → FotoFaxina.
 
 ## Como funciona
 
+> 🔒 **Seus arquivos ficam intactos.** O FotoFaxina só **lê** o HD: nunca apaga, move, renomeia
+> ou altera nenhum arquivo de origem — nem as duplicatas, nem os memes. Tudo o que ele grava
+> (banco, miniaturas, configurações) fica na pasta de dados dele (`~/.fotofaxina`). Um teste
+> automático confere isso a cada versão (`tests/test_origem_intocada.py`).
+
 1. **Plugou o HD** → o app detecta e começa a análise sozinho.
 2. **Varredura**: lê cada arquivo, calcula hash (duplicata exata) e hash perceptual
    (a mesma foto reenviada/recomprimida pelo WhatsApp), lê data e câmera do EXIF.

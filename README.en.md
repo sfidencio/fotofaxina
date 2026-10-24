@@ -28,6 +28,11 @@ To uninstall: Windows Settings → Apps → FotoFaxina.
 
 ## How it works
 
+> 🔒 **Your files stay untouched.** FotoFaxina only **reads** the drive: it never deletes, moves,
+> renames or modifies any source file — not even duplicates or memes. Everything it writes
+> (database, thumbnails, settings) goes to its own data folder (`~/.fotofaxina`). An automated
+> test checks this on every release (`tests/test_origem_intocada.py`).
+
 1. **Drive plugged in** → the app notices and starts the analysis on its own.
 2. **Scan**: reads every file, computes a hash (exact duplicates) and a perceptual hash (the same
    photo re-sent/recompressed by WhatsApp), and reads the date and camera from EXIF.
