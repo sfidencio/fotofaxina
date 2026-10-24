@@ -109,7 +109,9 @@ def main() -> None:
 
     # 3) quantizar (int8): ~4x menor, quase a mesma resposta
     int8 = OUT / "clip_image.onnx"
-    quantize_dynamic(str(fp32), str(int8), weight_type=QuantType.QInt8)
+    # só MatMul/Gemm: ConvInteger (convolução int8) não roda no ONNX Runtime de CPU; a única
+    # convolução do CLIP (recorte da imagem em blocos) é pequena e fica em float
+    quantize_dynamic(str(fp32), str(int8), weight_type=QuantType.QInt8, op_types_to_quantize=["MatMul", "Gemm"])
     # versão de formato compatível com ONNX Runtime mais antigos (o opset 17 cabe no IR 8)
     import onnx
 
