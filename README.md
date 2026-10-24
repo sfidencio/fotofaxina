@@ -116,6 +116,29 @@ O app abre no idioma do sistema (português ou inglês). Para trocar: Configura�
   Revisão (filtro “Baixa confiança”) e ajuste. Quando confiar no resultado, ligue o envio
   automático e o fluxo vira só “plugar o HD”.
 
+## Política de assinatura de código (Code signing policy)
+
+Assinatura de código gratuita fornecida por [SignPath.io](https://about.signpath.io/),
+certificado da [SignPath Foundation](https://signpath.org/).
+
+- Autores e revisores (committers): [sfidencio](https://github.com/sfidencio)
+- Aprovador das assinaturas: [sfidencio](https://github.com/sfidencio)
+
+Os instaladores são gerados automaticamente pelo GitHub Actions a partir deste repositório
+(`.github/workflows/release.yml`) e cada versão assinada é aprovada manualmente.
+
+### Privacidade
+
+O FotoFaxina não envia nenhuma informação para outros sistemas sem que você peça. As fotos são
+analisadas no seu próprio computador (a IA roda localmente). A única comunicação de rede é com o
+**Google Fotos**, para enviar as fotos e criar os álbuns que você escolheu, depois que você conecta
+sua conta Google e clica em Enviar. O login fica salvo só no seu computador
+(`~/.fotofaxina/token.json`) e pode ser removido em Configurações → Desconectar.
+
+## Licença
+
+[MIT](LICENSE). O modelo de IA usado é o CLIP da OpenAI (licença MIT).
+
 ---
 
 ## Para desenvolvedores

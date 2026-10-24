@@ -115,6 +115,29 @@ The app opens in the system language (English or Portuguese). To change it: Sett
   (“Low confidence” filter) and adjust. Once you trust the result, turn automatic upload on and
   the whole flow becomes “plug in the drive”.
 
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by
+[SignPath Foundation](https://signpath.org/).
+
+- Committers and reviewers: [sfidencio](https://github.com/sfidencio)
+- Approvers: [sfidencio](https://github.com/sfidencio)
+
+Installers are built automatically by GitHub Actions from this repository
+(`.github/workflows/release.yml`) and every signed release is approved manually.
+
+### Privacy
+
+FotoFaxina will not transfer any information to other networked systems unless specifically
+requested by the user. Photos are analyzed on your own computer (the AI runs locally). The only
+network communication is with **Google Photos**, to upload the photos and create the albums you
+chose, after you connect your Google account and click Upload. The sign-in is stored only on your
+computer (`~/.fotofaxina/token.json`) and can be removed in Settings → Disconnect.
+
+## License
+
+[MIT](LICENSE). The AI model is OpenAI's CLIP (MIT license).
+
 ---
 
 ## For developers
