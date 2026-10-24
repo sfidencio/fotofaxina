@@ -15,12 +15,8 @@ try:  # fotos HEIC de iPhone
 except ImportError:  # pragma: no cover
     pass
 
-try:
-    import imagehash
-except ImportError:  # pragma: no cover
-    imagehash = None
-
 from . import db
+from .phash import phash
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -116,10 +112,9 @@ def analyze(path: str, st: os.stat_result) -> dict:
             with Image.open(path) as img:
                 info["width"], info["height"] = img.size
                 taken, info["camera"] = _exif_info(img)
-                if imagehash is not None:
-                    small = ImageOps.exif_transpose(img).convert("RGB")
-                    small.thumbnail((512, 512))
-                    info["phash"] = str(imagehash.phash(small))
+                small = ImageOps.exif_transpose(img).convert("RGB")
+                small.thumbnail((512, 512))
+                info["phash"] = phash(small)
         except Exception:
             pass  # arquivo corrompido ou formato sem suporte: segue só com hash
     if taken:

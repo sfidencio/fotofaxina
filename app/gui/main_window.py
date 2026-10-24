@@ -3,14 +3,14 @@ from __future__ import annotations
 
 import logging
 
-from PySide6.QtCore import QThreadPool
-from PySide6.QtGui import QAction, QCloseEvent
+from PySide6.QtCore import QThreadPool, QTimer
+from PySide6.QtGui import QAction, QCloseEvent, QIcon
 from PySide6.QtWidgets import (
     QApplication, QFileDialog, QMainWindow, QMenu, QMessageBox, QStyle, QSystemTrayIcon, QTabWidget,
 )
 
-from .. import db, pipeline
-from ..config import APP_DIR, LOG_PATH, TOKEN_PATH, Config
+from .. import __version__, db, google_photos, pipeline
+from ..config import APP_DIR, APP_NAME, LOG_PATH, TOKEN_PATH, Config, resource
 from ..drive_watcher import DriveWatcher
 from .tabs import AlbunsTab, ConfigTab, InicioTab, RevisaoTab
 from .workers import Job
@@ -28,9 +28,10 @@ class MainWindow(QMainWindow):
         self.pool = QThreadPool.globalInstance()
         self.quitting = False
 
-        self.setWindowTitle("Organizador de Fotos → Google Fotos")
+        self.setWindowTitle(f"{APP_NAME} {__version__} — fotos do HD para o Google Fotos")
         self.resize(1100, 720)
-        icon = self.style().standardIcon(QStyle.SP_DriveHDIcon)
+        icon_file = resource("assets/icon-256.png")
+        icon = QIcon(str(icon_file)) if icon_file.exists() else self.style().standardIcon(QStyle.SP_DriveHDIcon)
         self.setWindowIcon(icon)
 
         self.inicio = InicioTab()
@@ -63,7 +64,7 @@ class MainWindow(QMainWindow):
             act.triggered.connect(slot)
             menu.addAction(act)
         self.tray.setContextMenu(menu)
-        self.tray.setToolTip("Organizador de Fotos")
+        self.tray.setToolTip(APP_NAME)
         self.tray.activated.connect(lambda reason: self.show_normal()
                                     if reason == QSystemTrayIcon.Trigger else None)
         if QSystemTrayIcon.isSystemTrayAvailable():
@@ -74,6 +75,27 @@ class MainWindow(QMainWindow):
 
         self.refresh_summary()
         self.inicio.log("Pronto. Plugue um HD ou escolha uma pasta.")
+        if not cfg.welcome_done:
+            QTimer.singleShot(400, self.welcome)
+
+    def welcome(self):
+        """Primeira execução: explica em 3 linhas e já oferece conectar a conta Google."""
+        self.cfg.welcome_done = True
+        self.cfg.save()
+        self.show_normal()
+        texto = (
+            "<h3>Bem-vindo ao FotoFaxina!</h3>"
+            "<p>1. Conecte sua conta do Google Fotos.<br>"
+            "2. Plugue o HD (ou escolha uma pasta) — a análise começa sozinha.<br>"
+            "3. Confira o resultado e clique em <b>Enviar para o Google Fotos</b>.</p>"
+            "<p>O programa fica perto do relógio do Windows, esperando o HD.</p>"
+        )
+        if google_photos.has_client_secret() and not TOKEN_PATH.exists():
+            if QMessageBox.question(self, APP_NAME, texto + "<p><b>Conectar a conta Google agora?</b></p>") \
+                    == QMessageBox.Yes:
+                self.start_connect()
+        else:
+            QMessageBox.information(self, APP_NAME, texto)
 
     # ---------------- utilidades
     def notify(self, title: str, msg: str):
@@ -212,7 +234,7 @@ class MainWindow(QMainWindow):
         if not self.quitting and self.tray.isVisible():
             event.ignore()
             self.hide()
-            self.notify("Organizador de Fotos", "Continua rodando aqui. Plugue um HD quando quiser.")
+            self.notify(APP_NAME, "Continua rodando aqui, perto do relógio. Plugue um HD quando quiser.")
             return
         event.accept()
 

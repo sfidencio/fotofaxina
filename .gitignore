@@ -222,3 +222,4 @@ __marimo__/
 # FotoFaxina
 client_secret*.json
 token.json
+!packaging/fotofaxina.spec

@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QProgressBar, QPushButton, QSpinBox, QStyle, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
-from .. import classifier, db, google_photos
+from .. import autostart, classifier, db, google_photos
 from ..config import CATEGORIES, SOURCES, TOKEN_PATH, Config, wants_upload
 from .workers import ThumbJob
 
@@ -413,15 +413,20 @@ class ConfigTab(QWidget):
         al = QVBoxLayout(auto)
         self.scan_check = QCheckBox("Analisar automaticamente quando um HD for plugado")
         self.upload_check = QCheckBox("Enviar automaticamente após a análise (sem revisar)")
+        self.startup_check = QCheckBox("Iniciar junto com o Windows (minimizado, esperando o HD)")
+        self.startup_check.setVisible(autostart.supported())
         al.addWidget(self.scan_check)
         al.addWidget(self.upload_check)
+        al.addWidget(self.startup_check)
 
         acc = QGroupBox("Conta Google")
         gl = QVBoxLayout(acc)
         self.acc_lbl = QLabel()
         self.acc_lbl.setWordWrap(True)
-        b1 = QPushButton("1. Selecionar client_secret.json…")
-        b2 = QPushButton("2. Conectar conta Google")
+        b1 = QPushButton("Selecionar client_secret.json…")
+        # no instalador com credencial embutida o usuário final não precisa disso
+        b1.setVisible(google_photos.bundled_secret_path() is None)
+        b2 = QPushButton("Conectar conta Google")
         b3 = QPushButton("Desconectar")
         b1.clicked.connect(self._pick_secret)
         b2.clicked.connect(lambda: self.connect_google.emit())
@@ -463,6 +468,7 @@ class ConfigTab(QWidget):
         self.min_spin.setValue(c.min_event_size)
         self.scan_check.setChecked(c.auto_scan_on_drive)
         self.upload_check.setChecked(c.auto_upload)
+        self.startup_check.setChecked(autostart.is_enabled())
         self.ai_status.setText(
             "IA instalada." if classifier.ai_available()
             else "IA não instalada — rode: pip install -r requirements-ia.txt (sem ela, só regras)."
@@ -479,7 +485,7 @@ class ConfigTab(QWidget):
         if TOKEN_PATH.exists():
             self.acc_lbl.setText("✔ Conta conectada.")
         elif google_photos.has_client_secret():
-            self.acc_lbl.setText("Credencial do Google carregada. Falta clicar em “Conectar conta Google”.")
+            self.acc_lbl.setText("Falta só clicar em “Conectar conta Google” e autorizar no navegador.")
         else:
             self.acc_lbl.setText("Siga o README para criar o client_secret.json no Google Cloud (5 minutos).")
 
@@ -507,6 +513,11 @@ class ConfigTab(QWidget):
         c.min_event_size = self.min_spin.value()
         c.auto_scan_on_drive = self.scan_check.isChecked()
         c.auto_upload = self.upload_check.isChecked()
+        if autostart.supported():
+            try:
+                autostart.set_enabled(self.startup_check.isChecked())
+            except OSError as e:
+                QMessageBox.warning(self, "Configurações", f"Não consegui alterar a inicialização: {e}")
         c.save()
         QMessageBox.information(self, "Configurações", "Salvo. Use “Reagrupar” na aba Álbuns para aplicar.")
         self.saved.emit()

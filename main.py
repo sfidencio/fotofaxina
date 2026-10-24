@@ -1,4 +1,4 @@
-"""Organizador de Fotos → Google Fotos.
+"""FotoFaxina — fotos do HD organizadas no Google Fotos.
 
 Uso:
     python main.py                 # abre a janela
@@ -29,14 +29,27 @@ def main() -> None:
         run_cli(sys.argv[sys.argv.index("--cli") + 1])
         return
 
-    from PySide6.QtWidgets import QApplication
+    from PySide6.QtCore import QLockFile
+    from PySide6.QtGui import QIcon
+    from PySide6.QtWidgets import QApplication, QMessageBox
 
-    from app.config import Config
+    from app.config import APP_DIR, APP_NAME, Config, resource
     from app.gui.main_window import MainWindow
 
     app = QApplication(sys.argv)
-    app.setApplicationName("Organizador de Fotos")
+    app.setApplicationName(APP_NAME)
     app.setQuitOnLastWindowClosed(False)
+    app.setWindowIcon(QIcon(str(resource("assets/icon-256.png"))))
+
+    # só uma cópia aberta (o Windows pode iniciar uma e o usuário abrir outra)
+    APP_DIR.mkdir(parents=True, exist_ok=True)
+    lock = QLockFile(str(APP_DIR / "fotofaxina.lock"))
+    if not lock.tryLock(200):
+        if "--minimizado" not in sys.argv:
+            QMessageBox.information(None, APP_NAME, "O FotoFaxina já está aberto.\n"
+                                    "Procure o ícone perto do relógio do Windows.")
+        return
+
     win = MainWindow(Config.load())
     if "--minimizado" not in sys.argv:
         win.show()

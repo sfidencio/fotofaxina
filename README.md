@@ -6,6 +6,21 @@ App desktop (Python + PySide6) que lê fotos de um HD, separa o que é foto de v
 meme, print, figurinha e documento, remove duplicatas, monta álbuns por evento/mês e envia
 para o Google Fotos. Funciona em Windows, Linux e macOS.
 
+## Instalar (usuário final)
+
+1. Vá em **[Releases](https://github.com/sfidencio/fotofaxina/releases/latest)** e baixe
+   `FotoFaxina-Setup-x.y.z.exe`.
+2. Abra o arquivo. Se aparecer “O Windows protegeu o computador”, clique em
+   **Mais informações → Executar assim mesmo** (o instalador não tem assinatura digital paga).
+3. Avance até o fim. Não precisa de senha de administrador nem de Python.
+4. No primeiro uso o FotoFaxina oferece conectar sua conta Google. Depois é só plugar o HD.
+
+O programa fica perto do relógio do Windows e começa a analisar sozinho quando um HD é plugado.
+Para desinstalar: Configurações do Windows → Aplicativos → FotoFaxina.
+
+> O instalador vem sem a IA local (PyTorch tem ~2 GB). A separação usa as regras e as
+> duplicatas; imagens do WhatsApp sem classificação ficam para você decidir na aba Revisão.
+
 ## Como funciona
 
 1. **Plugou o HD** → o app (rodando na bandeja) detecta e começa a análise sozinho.
@@ -86,6 +101,28 @@ O Google exige que cada app tenha uma credencial própria:
   Revisão (filtro “Baixa confiança”) e ajuste. Quando confiar no resultado, ligue o envio
   automático e o fluxo vira só “plugar o HD”.
 
+## Gerar uma nova versão do instalador (desenvolvedor)
+
+O GitHub Actions (`.github/workflows/release.yml`) monta tudo sozinho num Windows na nuvem:
+PyInstaller → instalador Inno Setup → página de Releases.
+
+```bash
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+Em ~10 minutos o `FotoFaxina-Setup-1.0.1.exe` aparece em Releases. Também dá para rodar à mão
+em **Actions → Instalador Windows → Run workflow** (o arquivo fica em “Artifacts”).
+
+**Credencial embutida (recomendado):** para o usuário final não precisar do Google Cloud,
+cadastre o conteúdo do seu `client_secret.json` em **Settings → Secrets and variables →
+Actions → New repository secret** com o nome `GOOGLE_CLIENT_SECRET_JSON`. O build coloca a
+credencial dentro do instalador; ela nunca vai para o código. Lembre de adicionar o Gmail de
+quem vai usar como “usuário de teste” na tela de permissão OAuth do Google Cloud.
+
+Build local no Windows: `pip install pyinstaller` → `pyinstaller packaging/fotofaxina.spec`
+→ `iscc /DAppVersion=1.0.0 packaging\installer.iss`.
+
 ## Linha de comando (sem janela)
 
 ```bash
@@ -95,9 +132,9 @@ python main.py --cli /caminho/do/hd --enviar   # analisa e envia
 
 ## Onde ficam os dados
 
-`~/.organizador_fotos/` (no Windows `C:\Users\<você>\.organizador_fotos\`):
+`~/.fotofaxina/` (no Windows `C:\Users\<você>\.fotofaxina\`):
 `biblioteca.sqlite` (estado de cada arquivo), `config.json`, `token.json` (login Google),
-`miniaturas/` e `organizador.log`. Apagar essa pasta reinicia tudo do zero
+`miniaturas/` e `fotofaxina.log`. Apagar essa pasta reinicia tudo do zero
 (mas o app não saberá mais o que já foi enviado).
 
 ## Estrutura do código
@@ -112,5 +149,9 @@ app/grouper.py           eventos e álbuns por mês
 app/google_photos.py     OAuth + upload + álbuns (Photos Library API)
 app/pipeline.py          orquestra as etapas (retomável)
 app/drive_watcher.py     detecta HD plugado
+app/autostart.py         iniciar com o Windows
+app/phash.py             hash perceptual (duplicatas parecidas)
+packaging/               PyInstaller (.spec) e instalador (Inno Setup)
+.github/workflows/       build automático do instalador
 app/gui/                 janela, abas, tarefas em segundo plano
 ```

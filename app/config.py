@@ -3,16 +3,28 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-APP_DIR = Path(os.environ.get("ORGANIZADOR_FOTOS_DIR", Path.home() / ".organizador_fotos"))
+APP_NAME = "FotoFaxina"
+APP_DIR = Path(
+    os.environ.get("FOTOFAXINA_DIR") or os.environ.get("ORGANIZADOR_FOTOS_DIR") or Path.home() / ".fotofaxina"
+)
+# pasta dos arquivos do programa (dentro do .exe gerado pelo PyInstaller ou na raiz do projeto)
+BUNDLE_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent))
+
+
+def resource(rel: str) -> Path:
+    return BUNDLE_DIR / rel
+
+
 DB_PATH = APP_DIR / "biblioteca.sqlite"
 TOKEN_PATH = APP_DIR / "token.json"
 CLIENT_SECRET_PATH = APP_DIR / "client_secret.json"
 THUMBS_DIR = APP_DIR / "miniaturas"
 CONFIG_PATH = APP_DIR / "config.json"
-LOG_PATH = APP_DIR / "organizador.log"
+LOG_PATH = APP_DIR / "fotofaxina.log"
 
 # chave -> rótulo exibido
 CATEGORIES: dict[str, str] = {
@@ -45,6 +57,7 @@ class Config:
     min_event_size: int = 8                # eventos menores vão para o álbum do mês
     auto_scan_on_drive: bool = True        # analisa sozinho quando um HD é plugado
     auto_upload: bool = False              # envia sozinho após a análise (sem revisão)
+    welcome_done: bool = False             # já mostrou a tela de boas-vindas
     min_image_side: int = 200              # imagens menores que isso viram "outro"
     ignore_dirs: list = field(default_factory=lambda: [
         "$RECYCLE.BIN", "System Volume Information", "RECYCLER", ".Trash", ".Trashes",

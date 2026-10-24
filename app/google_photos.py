@@ -9,7 +9,7 @@ import os
 import shutil
 import time
 
-from .config import CLIENT_SECRET_PATH, TOKEN_PATH
+from .config import CLIENT_SECRET_PATH, TOKEN_PATH, resource
 
 SCOPES = [
     "https://www.googleapis.com/auth/photoslibrary.appendonly",
@@ -31,8 +31,20 @@ class QuotaExceeded(GooglePhotosError):
     pass
 
 
+def bundled_secret_path():
+    """Credencial embutida no instalador (gerada no build a partir de um secret do GitHub)."""
+    p = resource("client_secret.json")
+    return p if p.exists() else None
+
+
+def secret_path():
+    if CLIENT_SECRET_PATH.exists():
+        return CLIENT_SECRET_PATH
+    return bundled_secret_path()
+
+
 def has_client_secret() -> bool:
-    return CLIENT_SECRET_PATH.exists()
+    return secret_path() is not None
 
 
 def install_client_secret(src: str) -> None:
@@ -69,11 +81,11 @@ class GooglePhotos:
                 raise NotConnected("Conecte sua conta Google na aba Configurações.")
             if not has_client_secret():
                 raise NotConnected("Selecione o arquivo client_secret.json na aba Configurações.")
-            flow = InstalledAppFlow.from_client_secrets_file(str(CLIENT_SECRET_PATH), SCOPES)
+            flow = InstalledAppFlow.from_client_secrets_file(str(secret_path()), SCOPES)
             creds = flow.run_local_server(
                 port=0, open_browser=True,
                 authorization_prompt_message="Abrindo o navegador para login no Google...",
-                success_message="Pronto! Pode fechar esta aba e voltar ao Organizador de Fotos.",
+                success_message="Pronto! Pode fechar esta aba e voltar ao FotoFaxina.",
             )
         TOKEN_PATH.write_text(creds.to_json(), encoding="utf-8")
         self.session = AuthorizedSession(creds)
