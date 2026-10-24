@@ -204,6 +204,9 @@ EN: dict[str, str] = {
     "Modelo de IA não encontrado nesta instalação — usando só as regras. Clique abaixo para baixar.":
         "AI model not found in this installation — using rules only. Click below to download it.",
     "Inteligência artificial": "Artificial intelligence",
+    "Falta o componente que executa a IA. No terminal, rode <b>pip install -r requirements.txt</b> e abra o FotoFaxina de novo.":
+        "The component that runs the AI is missing. In a terminal, run <b>pip install -r requirements.txt</b> "
+        "and open FotoFaxina again.",
     "Modelo de IA instalado. Na próxima análise ele já será usado.":
         "AI model installed. It will be used in the next analysis.",
     "O novo idioma vale a partir da próxima vez que o FotoFaxina for aberto.":

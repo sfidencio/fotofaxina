@@ -562,13 +562,19 @@ class ConfigTab(QWidget):
         self.refresh_account()
 
     def refresh_ai(self):
-        ok = classifier.ai_available()
-        self.ai_status.setText(
-            _("IA pronta: modelo leve embutido, roda no processador, sem placa de vídeo.") if ok
-            else _("Modelo de IA não encontrado nesta instalação — usando só as regras. "
-                   "Clique abaixo para baixar.")
-        )
-        self.btn_ai.setVisible(not ok)
+        has_model = classifier.model_dir() is not None
+        has_runtime = classifier.runtime_installed()
+        if has_model and has_runtime:
+            text = _("IA pronta: modelo leve embutido, roda no processador, sem placa de vídeo.")
+        elif not has_runtime:
+            # acontece ao rodar pelo código sem reinstalar as dependências depois de um git pull
+            text = _("Falta o componente que executa a IA. No terminal, rode "
+                     "<b>pip install -r requirements.txt</b> e abra o FotoFaxina de novo.")
+        else:
+            text = _("Modelo de IA não encontrado nesta instalação — usando só as regras. "
+                     "Clique abaixo para baixar.")
+        self.ai_status.setText(text)
+        self.btn_ai.setVisible(not has_model)
 
     def _mode_changed(self):
         mode = self.mode_combo.currentData()

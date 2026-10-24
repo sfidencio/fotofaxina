@@ -28,12 +28,16 @@ def model_dir():
     return None
 
 
-def ai_available() -> bool:
+def runtime_installed() -> bool:
     try:
         import onnxruntime  # noqa: F401
     except ImportError:
         return False
-    return model_dir() is not None
+    return True
+
+
+def ai_available() -> bool:
+    return runtime_installed() and model_dir() is not None
 
 
 def rule_based(r, cfg) -> tuple[str | None, float]:
