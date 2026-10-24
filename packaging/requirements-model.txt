@@ -1,7 +1,8 @@
 # Só para GERAR o modelo (build). O app instalado não precisa disto.
 # Instale o PyTorch para CPU antes: pip install torch --index-url https://download.pytorch.org/whl/cpu
-transformers>=4.40,<5
-onnx>=1.16
-onnxruntime>=1.18
-numpy>=1.24
+# versões fixas e compatíveis entre si (torch 2.5.1 CPU é instalado antes, no workflow)
+transformers==4.46.3
+onnx==1.17.0
+onnxruntime==1.20.1
+numpy<2.2
 Pillow>=10.0
