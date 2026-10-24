@@ -196,6 +196,8 @@ EN: dict[str, str] = {
     "Baixando modelo de IA": "Downloading AI model",
     "Baixando o modelo de IA (~96 MB)…": "Downloading the AI model (~96 MB)…",
     "Download cancelado.": "Download cancelled.",
+    "O modelo de IA ainda não está publicado na última versão do FotoFaxina. Tente de novo em alguns minutos.":
+        "The AI model is not published in the latest FotoFaxina release yet. Try again in a few minutes.",
     "Arquivo do modelo incompleto: falta {nome}.": "Incomplete model file: {nome} is missing.",
     "Modelo de IA instalado.": "AI model installed.",
     "Baixar modelo de IA (~96 MB)": "Download AI model (~96 MB)",

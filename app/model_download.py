@@ -21,6 +21,9 @@ def download_model(progress=None, log=None, stop=None) -> bool:
     stage = _("Baixando modelo de IA")
     log(_("Baixando o modelo de IA (~96 MB)…"))
     with requests.get(MODEL_URL, stream=True, timeout=60) as resp:
+        if resp.status_code == 404:
+            raise RuntimeError(_("O modelo de IA ainda não está publicado na última versão do FotoFaxina. "
+                                 "Tente de novo em alguns minutos."))
         resp.raise_for_status()
         total = int(resp.headers.get("content-length") or 0)
         buf = io.BytesIO()
