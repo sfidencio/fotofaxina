@@ -39,6 +39,8 @@ class Config:
     include_whatsapp: bool = True          # envia fotos pessoais recebidas no WhatsApp
     use_ai: bool = True                    # usa o modelo CLIP local quando instalado
     ai_min_confidence: float = 0.45        # abaixo disso o item aparece como "baixa confiança"
+    album_mode: str = "evento"             # evento | mes | ano
+    year_album_title: str = "Fotos {ano}"  # nome do álbum no modo "ano"
     event_gap_hours: float = 24.0          # intervalo sem fotos que separa dois eventos
     min_event_size: int = 8                # eventos menores vão para o álbum do mês
     auto_scan_on_drive: bool = True        # analisa sozinho quando um HD é plugado

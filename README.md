@@ -16,8 +16,14 @@ para o Google Fotos. Funciona em Windows, Linux e macOS.
      `.webp` do WhatsApp = figurinha, imagens minúsculas = ícone/lixo.
    - IA local (CLIP, opcional, offline e gratuita) para o restante: foto pessoal, paisagem,
      meme, print, documento.
-4. **Álbuns**: fotos próximas no tempo (padrão: sem intervalo maior que 24h e com 8+ fotos)
-   viram um evento — “Evento 24 a 26/12/2023”. O resto vai para o álbum do mês.
+4. **Álbuns** — escolha em Configurações → “Organizar álbuns”:
+   - **Por evento** (padrão): fotos próximas no tempo (sem intervalo maior que 24h e com 8+
+     fotos) viram “Evento 24 a 26/12/2023”; o resto vai para o álbum do mês.
+   - **Por mês**: “Dezembro de 2023”.
+   - **Por ano**: “Fotos 2023” (nome configurável). Ideal para HDs já organizados em pastas
+     `2020/`, `2021/`… A data real da foto (EXIF ou nome do arquivo) manda; se a foto não
+     tiver data, vale o ano da pasta (`2021/Celular da esposa/foto.jpg` → 2021). Sem nenhum
+     dos dois, vai para “Fotos sem data”.
    Renomeie à vontade na aba **Álbuns** antes de enviar.
 5. **Revisão** (opcional): grade de miniaturas com filtros. Selecione e marque
    “Enviar” / “Não enviar” / “Mudar categoria”.

@@ -1,6 +1,8 @@
-"""Agrupa as fotos que serão enviadas em álbuns por evento (proximidade de data) ou por mês."""
+"""Agrupa as fotos que serão enviadas em álbuns: por evento, por mês ou por ano."""
 from __future__ import annotations
 
+import os
+import re
 from datetime import datetime, timedelta
 
 from . import db
@@ -24,6 +26,37 @@ def event_title(start: datetime, end: datetime) -> str:
 
 def month_title(dt: datetime) -> str:
     return f"{MESES[dt.month - 1]} de {dt.year}"
+
+
+YEAR_DIR_RE = re.compile(r"^((?:19|20)\d{2})(?!\d)")
+
+
+def year_from_folder(path: str) -> int | None:
+    """Ano pelo nome da pasta mais próxima do arquivo: '2021', '2021 - Viagem', '2021_celular'..."""
+    max_year = datetime.now().year + 1
+    for part in reversed(os.path.normpath(os.path.dirname(path)).split(os.sep)):
+        m = YEAR_DIR_RE.match(part.strip())
+        if m and 1990 <= int(m.group(1)) <= max_year:
+            return int(m.group(1))
+    return None
+
+
+def plan_years(items: list[tuple[int, datetime, str, str]], title_tpl: str):
+    """Um álbum por ano. A data da foto (EXIF/nome) manda; sem ela, vale o ano da pasta;
+    sem nenhum dos dois, a foto vai para 'sem data' (a data do arquivo costuma ser a da cópia)."""
+    albums: dict[str, list] = {}
+    for pid, dt, date_source, path in items:
+        year = dt.year if date_source != "arquivo" else year_from_folder(path)
+        if year is None:
+            key, title = "ano-sem-data", title_tpl.replace("{ano}", "sem data")
+            start = end = dt
+        else:
+            key, title = f"ano-{year}", title_tpl.replace("{ano}", str(year))
+            start, end = datetime(year, 1, 1), datetime(year, 12, 31, 23, 59)
+        a = albums.setdefault(key, [title, start, end, []])
+        a[1], a[2] = min(a[1], start), max(a[2], end)
+        a[3].append(pid)
+    return {k: tuple(v) for k, v in albums.items()}
 
 
 def plan_albums(items: list[tuple[int, datetime, str]], gap_hours: float, min_size: int):
@@ -70,12 +103,17 @@ def group(cfg, log=None) -> int:
     clear = []
     for r in rows:
         if wants_upload(r, cfg):
-            items.append((r["id"], datetime.fromisoformat(r["taken_at"]), r["date_source"]))
+            items.append((r["id"], datetime.fromisoformat(r["taken_at"]), r["date_source"], r["path"]))
         else:
             clear.append(r["id"])
     conn.executemany("UPDATE photos SET album_key=NULL WHERE id=?", [(i,) for i in clear])
 
-    plan = plan_albums(items, cfg.event_gap_hours, cfg.min_event_size)
+    if cfg.album_mode == "ano":
+        plan = plan_years(items, cfg.year_album_title)
+    elif cfg.album_mode == "mes":
+        plan = plan_albums([i[:3] for i in items], gap_hours=0, min_size=10**9)
+    else:
+        plan = plan_albums([i[:3] for i in items], cfg.event_gap_hours, cfg.min_event_size)
     for key, (title, start, end, ids) in plan.items():
         existing = conn.execute("SELECT * FROM albums WHERE key=?", (key,)).fetchone()
         if existing is None:

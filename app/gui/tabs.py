@@ -8,7 +8,7 @@ from PySide6.QtCore import QSize, Qt, QThreadPool, QUrl, Signal
 from PySide6.QtGui import QDesktopServices, QIcon
 from PySide6.QtWidgets import (
     QAbstractItemView, QCheckBox, QComboBox, QDoubleSpinBox, QFileDialog, QFormLayout, QGroupBox,
-    QHBoxLayout, QHeaderView, QLabel, QListWidget, QListWidgetItem, QMessageBox, QPlainTextEdit,
+    QHBoxLayout, QHeaderView, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMessageBox, QPlainTextEdit,
     QProgressBar, QPushButton, QSpinBox, QStyle, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -397,6 +397,15 @@ class ConfigTab(QWidget):
         fl.addRow(self.ai_check)
         fl.addRow(self.ai_status)
         fl.addRow("Confiança mínima da IA:", self.conf_spin)
+        self.mode_combo = QComboBox()
+        for label, key in (("Por evento (fotos próximas no tempo)", "evento"),
+                           ("Por mês", "mes"), ("Por ano", "ano")):
+            self.mode_combo.addItem(label, key)
+        self.year_title = QLineEdit()
+        self.year_title.setToolTip("Use {ano} onde o ano deve aparecer. Ex.: Fotos {ano}")
+        self.mode_combo.currentIndexChanged.connect(self._mode_changed)
+        fl.addRow("Organizar álbuns:", self.mode_combo)
+        fl.addRow("Nome do álbum anual:", self.year_title)
         fl.addRow("Novo evento após um intervalo de:", self.gap_spin)
         fl.addRow("Tamanho mínimo de um evento:", self.min_spin)
 
@@ -447,6 +456,9 @@ class ConfigTab(QWidget):
         self.wa_check.setChecked(c.include_whatsapp)
         self.ai_check.setChecked(c.use_ai)
         self.conf_spin.setValue(c.ai_min_confidence)
+        self.mode_combo.setCurrentIndex(max(0, self.mode_combo.findData(c.album_mode)))
+        self.year_title.setText(c.year_album_title)
+        self._mode_changed()
         self.gap_spin.setValue(c.event_gap_hours)
         self.min_spin.setValue(c.min_event_size)
         self.scan_check.setChecked(c.auto_scan_on_drive)
@@ -456,6 +468,12 @@ class ConfigTab(QWidget):
             else "IA não instalada — rode: pip install -r requirements-ia.txt (sem ela, só regras)."
         )
         self.refresh_account()
+
+    def _mode_changed(self):
+        mode = self.mode_combo.currentData()
+        self.year_title.setEnabled(mode == "ano")
+        self.gap_spin.setEnabled(mode == "evento")
+        self.min_spin.setEnabled(mode == "evento")
 
     def refresh_account(self):
         if TOKEN_PATH.exists():
@@ -481,6 +499,10 @@ class ConfigTab(QWidget):
         c.include_whatsapp = self.wa_check.isChecked()
         c.use_ai = self.ai_check.isChecked()
         c.ai_min_confidence = self.conf_spin.value()
+        c.album_mode = self.mode_combo.currentData()
+        c.year_album_title = self.year_title.text().strip() or "Fotos {ano}"
+        if "{ano}" not in c.year_album_title:
+            c.year_album_title += " {ano}"
         c.event_gap_hours = self.gap_spin.value()
         c.min_event_size = self.min_spin.value()
         c.auto_scan_on_drive = self.scan_check.isChecked()
