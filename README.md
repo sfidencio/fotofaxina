@@ -123,13 +123,11 @@ Para que ninguém fique dependente da sua conta, configure também no Google (um
 O GitHub Actions (`.github/workflows/release.yml`) monta tudo sozinho num Windows na nuvem:
 PyInstaller → instalador Inno Setup → página de Releases.
 
-```bash
-git tag v1.0.1
-git push origin v1.0.1
-```
-
-Em ~10 minutos o `FotoFaxina-Setup-1.0.1.exe` aparece em Releases. Também dá para rodar à mão
-em **Actions → Instalador Windows → Run workflow** (o arquivo fica em “Artifacts”).
+**Para lançar uma versão nova, basta mudar o número em `app/__init__.py`** (ex.: `1.0.0` →
+`1.0.1`) e dar push na `master`. Em ~10 minutos o `FotoFaxina-Setup-1.0.1.exe` aparece em
+Releases. Pushes que não mudam o número não geram versão nova. Também funciona com tag
+(`git tag v1.0.1 && git push origin v1.0.1`) ou à mão em **Actions → Instalador Windows →
+Run workflow** (aí o arquivo fica em “Artifacts”).
 
 **Credencial embutida (recomendado):** para o usuário final não precisar do Google Cloud,
 cadastre o conteúdo do seu `client_secret.json` em **Settings → Secrets and variables →
