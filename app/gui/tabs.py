@@ -461,6 +461,7 @@ class ConfigTab(QWidget):
         gl = QVBoxLayout(acc)
         self.acc_lbl = QLabel()
         self.acc_lbl.setWordWrap(True)
+        self.acc_lbl.setOpenExternalLinks(True)
         b1 = QPushButton("Selecionar client_secret.json…")
         # no instalador com credencial embutida o usuário final não precisa disso
         b1.setVisible(google_photos.bundled_secret_path() is None)
@@ -525,7 +526,11 @@ class ConfigTab(QWidget):
         elif google_photos.has_client_secret():
             self.acc_lbl.setText("Falta só clicar em “Conectar conta Google” e autorizar no navegador.")
         else:
-            self.acc_lbl.setText("Siga o README para criar o client_secret.json no Google Cloud (5 minutos).")
+            self.acc_lbl.setText(
+                'Falta a credencial do Google (uma vez só, ~10 min). '
+                '<a href="https://github.com/sfidencio/fotofaxina/blob/master/docs/CONFIGURAR-GOOGLE.md">'
+                'Veja o passo a passo em português</a>.'
+            )
 
     def _pick_secret(self):
         path, _ = QFileDialog.getOpenFileName(self, "client_secret.json", "", "JSON (*.json)")

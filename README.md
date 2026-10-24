@@ -62,21 +62,24 @@ No primeiro uso da IA o modelo (~600 MB) é baixado automaticamente e fica em ca
 Com placa NVIDIA, instale o PyTorch com CUDA (https://pytorch.org/get-started/locally/)
 antes do `requirements-ia.txt` — fica muitas vezes mais rápido.
 
-## Credencial do Google (uma vez só, ~5 minutos)
+## Credencial do Google (uma vez só, ~10 minutos)
 
-O Google exige que cada app tenha uma credencial própria:
+O Google exige que cada programa tenha uma credencial própria. Resumo:
 
-1. Acesse https://console.cloud.google.com/ e crie um projeto (ex.: “Organizador Fotos”).
-2. **APIs e serviços → Biblioteca** → procure **Photos Library API** → **Ativar**.
-3. **APIs e serviços → Tela de permissão OAuth** (Google Auth Platform):
-   tipo **Externo**, preencha nome e e-mail, e em **Público-alvo / Usuários de teste**
-   adicione o seu próprio Gmail.
-4. **Clientes / Credenciais → Criar credenciais → ID do cliente OAuth** → tipo
-   **App para computador** → baixe o JSON.
-5. No app: **Configurações → Selecionar client_secret.json** → **Conectar conta Google**.
-   O navegador abre, você autoriza e pronto.
+1. Abra o Google Cloud já em português: https://console.cloud.google.com/?hl=pt-BR
+2. Crie um projeto chamado `FotoFaxina`.
+3. Ative a **Photos Library API**.
+4. Em **Google Auth Platform** → **Primeiros passos**: nome do app, seu e-mail, público
+   **Externo**.
+5. Em **Público-alvo** → **Usuários de teste**: adicione o seu Gmail (e de quem mais for usar).
+6. Em **Clientes** → **Criar cliente** → tipo **App para computador** → baixe o JSON.
+7. No FotoFaxina: **Configurações** → **Selecionar client_secret.json** →
+   **Conectar conta Google**. Na tela “O Google não verificou este app”, clique em **Continuar**.
 
-> Enquanto o app estiver em modo “Teste” no Google Cloud, o login expira a cada 7 dias.
+👉 **Passo a passo completo, com os nomes dos botões em português e em inglês e solução dos
+erros mais comuns: [docs/CONFIGURAR-GOOGLE.md](docs/CONFIGURAR-GOOGLE.md)**
+
+> Enquanto o app estiver em modo de teste no Google Cloud, o login expira a cada 7 dias.
 > Quando expirar, é só clicar em **Conectar conta Google** de novo.
 
 ## Limitações da API do Google Fotos (importantes)
@@ -130,7 +133,8 @@ em **Actions → Instalador Windows → Run workflow** (o arquivo fica em “Art
 
 **Credencial embutida (recomendado):** para o usuário final não precisar do Google Cloud,
 cadastre o conteúdo do seu `client_secret.json` em **Settings → Secrets and variables →
-Actions → New repository secret** com o nome `GOOGLE_CLIENT_SECRET_JSON`. O build coloca a
+Actions → New repository secret** com o nome `GOOGLE_CLIENT_SECRET_JSON`
+(detalhes no final de [docs/CONFIGURAR-GOOGLE.md](docs/CONFIGURAR-GOOGLE.md)). O build coloca a
 credencial dentro do instalador; ela nunca vai para o código. Lembre de adicionar o Gmail de
 quem vai usar como “usuário de teste” na tela de permissão OAuth do Google Cloud.
 
