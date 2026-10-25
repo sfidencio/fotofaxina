@@ -67,7 +67,8 @@ To uninstall: Windows Settings → Apps → FotoFaxina.
    but isn't one, use **Not a duplicate**: it will be uploaded, and this sticks in later analyses.
 6. **Upload**: creates the albums and uploads in batches of 50. Everything is recorded in a local
    database; you can stop, turn off the PC, plug the drive in with another letter and continue
-   where it left off, never uploading anything twice.
+   where it left off, never uploading anything twice. If the internet drops, it retries; if one
+   batch fails, the others continue. Photos on a drive that isn't plugged in wait, without errors.
 
 ## Artificial intelligence (light, offline, no graphics card)
 
@@ -79,6 +80,8 @@ bundled in the installer, running on the CPU with **ONNX Runtime** (~15 MB) — 
   When off, only the rules are used (WhatsApp images become “Other” for you to decide).
 - By default the AI only looks at WhatsApp and unknown-source images — camera photos are almost
   always photos. To analyze everything: *Also analyze camera photos (slower)*.
+- Turned the AI on or downloaded the model after the first analysis? The next analysis redoes
+  what was decided without it (WhatsApp photos left as “Other”).
 - Fine tuning: *AI minimum confidence*. Items below it show up under the **Low confidence**
   filter in the Review tab.
 
@@ -161,7 +164,7 @@ FotoFaxina will not transfer any information to other networked systems unless s
 requested by the user. Photos are analyzed on your own computer (the AI runs locally). The only
 network communication is with **Google Photos**, to upload the photos and create the albums you
 chose, after you connect your Google account and click Upload. The sign-in is stored only on your
-computer (`~/.fotofaxina/token.json`) and can be removed in Settings → Disconnect.
+computer (`~/.fotofaxina/token.json`, protected by Windows encryption) and can be removed in Settings → Disconnect.
 
 ## License
 

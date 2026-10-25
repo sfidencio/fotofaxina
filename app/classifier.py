@@ -172,7 +172,14 @@ def get_clip(log) -> OnnxClip | None:
     return _clip
 
 
+def needs_ai(r, cfg) -> bool:
+    """A regra não decidiu e o item é do tipo que passa pela IA."""
+    return rule_based(r, cfg)[0] is None and not (r["source"] == "camera" and not cfg.ai_on_camera)
+
+
 def classify(cfg, progress=None, log=None, stop=None, batch_size: int = 16) -> int:
+    """Classifica o que está pendente. category_by: regra | ia | manual | sem_ia (precisava da IA,
+    mas ela estava desligada ou sem modelo) | ia_falhou (a IA não conseguiu abrir a imagem)."""
     progress = progress or (lambda *a: None)
     log = log or (lambda *a: None)
     conn = db.connect()
@@ -181,11 +188,25 @@ def classify(cfg, progress=None, log=None, stop=None, batch_size: int = 16) -> i
     ).fetchall()
     # duplicatas não precisam de IA
     conn.execute("UPDATE photos SET status='classified' WHERE status='scanned' AND duplicate_of IS NOT NULL")
-    total = len(rows)
+
+    # IA ligada depois (modelo baixado, opção marcada): o que foi decidido sem ela é refeito.
+    # Inclui registros de versões antigas, que gravavam esses casos como "regra".
+    redo = []
+    if cfg.use_ai and ai_available():
+        redo = [r for r in conn.execute(
+            "SELECT * FROM photos WHERE status='classified' AND media_item_id IS NULL "
+            "AND duplicate_of IS NULL AND category_by IN ('sem_ia', 'regra') ORDER BY id")
+            if r["category_by"] == "sem_ia" or needs_ai(r, cfg)]
+        if redo:
+            log(_("A IA está disponível: reclassificando {n} itens que antes foram decididos sem ela.").format(
+                n=len(redo)))
+    total = len(rows) + len(redo)
     if not total:
         conn.commit()
+        conn.close()
         return 0
-    log(_("Classificando {n} arquivos...").format(n=total))
+    if rows:
+        log(_("Classificando {n} arquivos...").format(n=len(rows)))
     stage = _("Classificando")
 
     def save(r, cat, conf, by):
@@ -196,8 +217,7 @@ def classify(cfg, progress=None, log=None, stop=None, batch_size: int = 16) -> i
             (cat, round(conf, 3), by, r["id"]),
         )
 
-    use_ai = cfg.use_ai
-    need_ai = []
+    need_ai = list(redo)
     for r in rows:
         cat, conf = rule_based(r, cfg)
         if cat:
@@ -205,9 +225,9 @@ def classify(cfg, progress=None, log=None, stop=None, batch_size: int = 16) -> i
         elif r["source"] == "camera" and not cfg.ai_on_camera:
             # foto de câmera quase sempre é foto mesmo: poupa tempo
             save(r, "foto", 0.6, "regra")
-        elif not use_ai:
+        elif not cfg.use_ai:
             cat, conf = fallback(r)
-            save(r, cat, conf, "regra")
+            save(r, cat, conf, "sem_ia")
         else:
             need_ai.append(r)
     conn.commit()
@@ -227,7 +247,7 @@ def classify(cfg, progress=None, log=None, stop=None, batch_size: int = 16) -> i
         for r, res in zip(batch, results):
             if res is None:
                 cat, conf = fallback(r)
-                save(r, cat, conf, "regra")
+                save(r, cat, conf, "ia_falhou" if clip else "sem_ia")
                 continue
             cat, conf = res
             # foto de câmera só muda de categoria se a IA estiver segura

@@ -193,6 +193,7 @@ class RevisaoTab(QWidget):
         btn_forget = QPushButton(_("Esquecer selecionadas…"))
         btn_forget.setToolTip(_("Remove os itens do histórico do FotoFaxina (não apaga nenhum arquivo)."))
         btn_forget.clicked.connect(self._forget_selected)
+        self.btn_forget = btn_forget
         btn_send.clicked.connect(lambda: self._set_decision("upload"))
         btn_skip.clicked.connect(lambda: self._set_decision("skip"))
         btn_auto.clicked.connect(lambda: self._set_decision(None))
@@ -216,6 +217,11 @@ class RevisaoTab(QWidget):
 
         self.video_icon = self.style().standardIcon(QStyle.SP_MediaPlay)
         self.file_icon = self.style().standardIcon(QStyle.SP_FileIcon)
+
+    def set_busy(self, busy: bool):
+        self.btn_forget.setEnabled(not busy)
+        self.btn_forget.setToolTip(_("Aguarde a tarefa atual terminar.") if busy else
+                                   _("Remove os itens do histórico do FotoFaxina (não apaga nenhum arquivo)."))
 
     # -- dados
     def _matches(self, r) -> bool:
@@ -253,8 +259,7 @@ class RevisaoTab(QWidget):
             rows = conn.execute(
                 "SELECT * FROM photos WHERE duplicate_of IS NULL ORDER BY taken_at"
             ).fetchall()
-        self.originals = {r["id"]: (r["path"], bool(r["media_item_id"]))
-                          for r in conn.execute("SELECT id, path, media_item_id FROM photos")}
+        self.originals = {}
         conn.close()
         self.rows = rows if cat == "__dup" else [r for r in rows if self._matches(r)]
         self.shown = 0
@@ -275,6 +280,17 @@ class RevisaoTab(QWidget):
 
     def _show_more(self):
         chunk = self.rows[self.shown:self.shown + PAGE]
+        # originais só das duplicatas desta página (em vez de carregar o banco inteiro)
+        wanted = [r["duplicate_of"] for r in chunk
+                  if r["duplicate_of"] is not None and r["duplicate_of"] not in self.originals]
+        if wanted:
+            conn = db.connect()
+            for i in range(0, len(wanted), 500):
+                part = wanted[i:i + 500]
+                for o in conn.execute(f"SELECT id, path, media_item_id FROM photos WHERE id IN "
+                                      f"({','.join('?' * len(part))})", part):
+                    self.originals[o["id"]] = (o["path"], bool(o["media_item_id"]))
+            conn.close()
         thumbs = []
         for r in chunk:
             it = QListWidgetItem(self.video_icon if r["is_video"] else self.file_icon, self._label(r))
@@ -568,6 +584,7 @@ class ConfigTab(QWidget):
         b1.clicked.connect(self._pick_secret)
         b2.clicked.connect(lambda: self.connect_google.emit())
         b3.clicked.connect(self._disconnect)
+        self._busy_buttons = [b1, b2, b3]
         row = QHBoxLayout()
         for b in (b1, b2, b3):
             row.addWidget(b)
@@ -582,6 +599,7 @@ class ConfigTab(QWidget):
         hist_lbl.setWordWrap(True)
         btn_clear = QPushButton(_("Limpar todo o histórico…"))
         btn_clear.clicked.connect(self._forget_all)
+        self._busy_buttons.append(btn_clear)
         hl.addWidget(hist_lbl, 1)
         hl.addWidget(btn_clear)
 
@@ -602,6 +620,10 @@ class ConfigTab(QWidget):
         lay.addStretch()
         lay.addWidget(save, 0, Qt.AlignRight)
         self.load()
+
+    def set_busy(self, busy: bool):
+        for b in self._busy_buttons:
+            b.setEnabled(not busy)
 
     def load(self):
         c = self.cfg

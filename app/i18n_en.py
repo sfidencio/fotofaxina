@@ -47,7 +47,6 @@ EN: dict[str, str] = {
     "Álbum renomeado: {titulo}": "Album renamed: {titulo}",
     "Não consegui renomear “{titulo}”: {erro}": "Could not rename “{titulo}”: {erro}",
     "sem resposta do Google": "no response from Google",
-    "Arquivo indisponível (HD desconectado?)": "File unavailable (drive disconnected?)",
     "Álbum criado: {titulo}": "Album created: {titulo}",
     "Conta Google não conectada.": "Google account not connected.",
     "Conecte sua conta Google na aba Configurações.": "Connect your Google account in the Settings tab.",
@@ -250,4 +249,22 @@ EN: dict[str, str] = {
     "{n} item(ns) não serão mais tratados como cópia. Eles são classificados na próxima análise ou no próximo envio.":
         "{n} item(s) will no longer be treated as copies. They are classified in the next analysis "
         "or upload.",
+    "Não encontrei a soma de verificação do modelo; conferindo só o conteúdo do arquivo.":
+        "Couldn't find the model checksum; checking only the file contents.",
+    "O arquivo do modelo chegou corrompido (a soma de verificação não confere). Tente baixar de novo.":
+        "The model file arrived corrupted (the checksum doesn't match). Try downloading again.",
+    "Soma de verificação do modelo conferida.": "Model checksum verified.",
+    "O login no Google expirou (enquanto o app está em modo de teste no Google Cloud, isso acontece a cada 7 dias). Clique em “Conectar conta Google” na aba Configurações.":
+        "Your Google sign-in expired (while the app is in testing mode in Google Cloud, this happens "
+        "every 7 days). Click “Connect Google account” in the Settings tab.",
+    "Sem conexão com o Google Fotos: {erro}": "No connection to Google Photos: {erro}",
+    "{n} arquivos já conhecidos em outro caminho (ex.: HD com outra letra); não foi preciso ler de novo.":
+        "{n} files already known under another path (e.g. drive with another letter); no need to read them again.",
+    "{n} itens são de um HD ou pasta que não está conectado agora; serão enviados quando estiver.":
+        "{n} items are on a drive or folder that is not connected now; they will be uploaded when it is.",
+    "Falha ao criar {n} itens no Google Fotos: {erro}": "Failed to create {n} items in Google Photos: {erro}",
+    "A IA está disponível: reclassificando {n} itens que antes foram decididos sem ela.":
+        "The AI is available: reclassifying {n} items that were previously decided without it.",
+    "{n} aguardam o HD de origem ser plugado.": "{n} are waiting for their source drive to be plugged in.",
+    "Aguarde a tarefa atual terminar.": "Wait for the current task to finish.",
 }

@@ -4,6 +4,8 @@ from __future__ import annotations
 import hashlib
 import os
 import re
+import struct
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 from PIL import Image, ImageOps
@@ -97,6 +99,57 @@ def _exif_info(img: Image.Image) -> tuple[datetime | None, str | None]:
     return taken, (str(camera).strip("\x00 ").strip() or None) if camera else None
 
 
+MP4_EPOCH = 2082844800  # segundos entre 1904-01-01 (início do relógio do MP4) e 1970-01-01
+ISO_VIDEO = {".mp4", ".mov", ".m4v", ".3gp"}
+
+
+def _boxes(f, start: int, end: int):
+    """Caixas (atoms) de um arquivo MP4/MOV entre start e end: (tipo, início_dos_dados, fim)."""
+    pos = start
+    while pos + 8 <= end:
+        f.seek(pos)
+        hdr = f.read(8)
+        if len(hdr) < 8:
+            return
+        size, kind = struct.unpack(">I4s", hdr)
+        head = 8
+        if size == 1:  # tamanho de 64 bits
+            big = f.read(8)
+            if len(big) < 8:
+                return
+            size, head = struct.unpack(">Q", big)[0], 16
+        elif size == 0:  # vai até o fim do arquivo
+            size = end - pos
+        if size < head:
+            return
+        yield kind, pos + head, min(pos + size, end)
+        pos += size
+
+
+def video_created(path: str) -> datetime | None:
+    """Data de gravação de vídeos MP4/MOV/3GP (caixa moov/mvhd), sem precisar do ffmpeg.
+    Só pula de caixa em caixa: não lê o vídeo inteiro."""
+    try:
+        with open(path, "rb") as f:
+            end = os.fstat(f.fileno()).st_size
+            for kind, s, e in _boxes(f, 0, end):
+                if kind != b"moov":
+                    continue
+                for k2, s2, _e2 in _boxes(f, s, e):
+                    if k2 != b"mvhd":
+                        continue
+                    f.seek(s2)
+                    data = f.read(12)
+                    if len(data) < 12:
+                        return None
+                    ts = struct.unpack(">Q", data[4:12])[0] if data[0] == 1 else struct.unpack(">I", data[4:8])[0]
+                    dt = datetime.fromtimestamp(ts - MP4_EPOCH)  # gravado em UTC → hora local
+                    return dt if 1990 <= dt.year <= datetime.now().year + 1 else None
+    except (OSError, ValueError, OverflowError, struct.error):
+        return None
+    return None
+
+
 def analyze(path: str, st: os.stat_result) -> dict:
     name = os.path.basename(path)
     ext = os.path.splitext(name)[1].lower()
@@ -124,6 +177,9 @@ def analyze(path: str, st: os.stat_result) -> dict:
     else:
         taken = date_from_name(name)
         date_source = "nome" if taken else None
+    if not taken and is_video and ext in ISO_VIDEO:
+        taken = video_created(path)  # ex.: IMG_1234.MOV do iPhone, que não tem data no nome
+        date_source = "video" if taken else None
     if not taken:
         taken = datetime.fromtimestamp(st.st_mtime)
         date_source = "arquivo"
@@ -141,7 +197,50 @@ def analyze(path: str, st: os.stat_result) -> dict:
     return info
 
 
-def scan(root: str, cfg, progress=None, log=None, stop=None) -> int:
+def _safe_analyze(item):
+    path, st = item
+    try:
+        return analyze(path, st)
+    except OSError as e:
+        return e
+
+
+def relocate(conn, path: str, root: str, st: os.stat_result) -> bool:
+    """HD plugado com outra letra (E: → F:) ou pasta movida: acha o registro antigo pelo caminho
+    relativo, tamanho e data do arquivo — sem ler o arquivo inteiro de novo para calcular o hash."""
+    tail = os.path.normcase(os.sep + os.path.relpath(path, root))
+    for r in conn.execute("SELECT id, path, mtime FROM photos WHERE size=?", (st.st_size,)).fetchall():
+        if (abs((r["mtime"] or 0) - st.st_mtime) < 2 and r["path"] != path
+                and os.path.normcase(r["path"]).endswith(tail) and not os.path.exists(r["path"])):
+            conn.execute("UPDATE photos SET path=?, mtime=? WHERE id=?", (path, st.st_mtime, r["id"]))
+            return True
+    return False
+
+
+def _store(conn, path: str, info: dict, row_id: int | None) -> bool:
+    """Grava o resultado da análise. Retorna True se é um arquivo novo."""
+    if row_id is None:
+        # mesmo conteúdo já conhecido em outro caminho que não existe mais -> só atualiza o caminho
+        moved = conn.execute("SELECT id, path FROM photos WHERE sha256=?", (info["sha256"],)).fetchall()
+        moved = [m for m in moved if not os.path.exists(m["path"])]
+        if moved:
+            conn.execute("UPDATE photos SET path=?, size=?, mtime=? WHERE id=?",
+                         (path, info["size"], info["mtime"], moved[0]["id"]))
+            return False
+        cols = ", ".join(info)
+        marks = ", ".join("?" for _ in info)
+        conn.execute(f"INSERT INTO photos({cols}) VALUES({marks})", tuple(info.values()))
+        return True
+    sets = ", ".join(f"{k}=?" for k in info)
+    conn.execute(
+        f"UPDATE photos SET {sets}, status=CASE WHEN media_item_id IS NULL THEN 'scanned' ELSE status END "
+        f"WHERE id=?",
+        (*info.values(), row_id),
+    )
+    return False
+
+
+def scan(root: str, cfg, progress=None, log=None, stop=None, workers: int | None = None) -> int:
     progress = progress or (lambda *a: None)
     log = log or (lambda *a: None)
     conn = db.connect()
@@ -150,52 +249,47 @@ def scan(root: str, cfg, progress=None, log=None, stop=None) -> int:
     files = list(iter_media(root, cfg.ignore_dirs))
     total = len(files)
     log(_("{n} fotos/vídeos encontrados em {pasta}").format(n=total, pasta=root))
-    novos = 0
-    for i, path in enumerate(files, 1):
-        if stop is not None and stop.is_set():
-            break
-        if i % 25 == 0 or i == total:
-            progress(_("Lendo arquivos"), i, total, os.path.basename(path))
-        try:
-            st = os.stat(path)
-        except OSError:
-            continue
-        row = conn.execute("SELECT id, size, mtime FROM photos WHERE path=?", (path,)).fetchone()
-        if row and row["size"] == st.st_size and abs((row["mtime"] or 0) - st.st_mtime) < 2:
-            continue
-        try:
-            info = analyze(path, st)
-        except OSError as e:
-            log(_("Não consegui ler {arquivo}: {erro}").format(arquivo=path, erro=e))
-            continue
+    novos = relocados = 0
+    pending: list[tuple[str, os.stat_result, int | None]] = []
+    # leitura e cálculo dos hashes em paralelo (o banco continua sendo usado só por esta thread)
+    workers = workers or max(1, min(3, os.cpu_count() or 1))
 
-        if row is None:
-            # mesmo arquivo já conhecido em outro caminho que não existe mais
-            # (ex.: o HD montou com outra letra) -> só atualiza o caminho
-            moved = conn.execute(
-                "SELECT id, path FROM photos WHERE sha256=?", (info["sha256"],)
-            ).fetchall()
-            moved = [m for m in moved if not os.path.exists(m["path"])]
-            if moved:
-                conn.execute(
-                    "UPDATE photos SET path=?, size=?, mtime=? WHERE id=?",
-                    (path, info["size"], info["mtime"], moved[0]["id"]),
-                )
-                continue
-            cols = ", ".join(info)
-            marks = ", ".join("?" for _ in info)
-            conn.execute(f"INSERT INTO photos({cols}) VALUES({marks})", tuple(info.values()))
-            novos += 1
-        else:
-            sets = ", ".join(f"{k}=?" for k in info)
-            conn.execute(
-                f"UPDATE photos SET {sets}, status=CASE WHEN media_item_id IS NULL THEN 'scanned' ELSE status END "
-                f"WHERE id=?",
-                (*info.values(), row["id"]),
-            )
-        if i % 100 == 0:
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        def flush():
+            nonlocal novos
+            results = pool.map(_safe_analyze, [(p, st) for p, st, _ in pending])
+            for (path, _st, row_id), info in zip(pending, results):
+                if isinstance(info, Exception):
+                    log(_("Não consegui ler {arquivo}: {erro}").format(arquivo=path, erro=info))
+                    continue
+                novos += _store(conn, path, info, row_id)
+            pending.clear()
             conn.commit()
+
+        for i, path in enumerate(files, 1):
+            if stop is not None and stop.is_set():
+                break
+            if i % 25 == 0 or i == total:
+                progress(_("Lendo arquivos"), i, total, os.path.basename(path))
+            try:
+                st = os.stat(path)
+            except OSError:
+                continue
+            row = conn.execute("SELECT id, size, mtime FROM photos WHERE path=?", (path,)).fetchone()
+            if row and row["size"] == st.st_size and abs((row["mtime"] or 0) - st.st_mtime) < 2:
+                continue
+            if row is None and relocate(conn, path, root, st):
+                relocados += 1
+                continue
+            pending.append((path, st, row["id"] if row else None))
+            if len(pending) >= 32:
+                flush()
+        if pending and not (stop is not None and stop.is_set()):
+            flush()
     conn.commit()
+    if relocados:
+        log(_("{n} arquivos já conhecidos em outro caminho (ex.: HD com outra letra); "
+              "não foi preciso ler de novo.").format(n=relocados))
     dups = mark_duplicates(conn)
     log(_("{novos} arquivos novos; {dup} duplicatas no total (somando todas as pastas já analisadas)").format(
         novos=novos, dup=dups))

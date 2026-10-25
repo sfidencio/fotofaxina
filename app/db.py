@@ -37,6 +37,7 @@ CREATE INDEX IF NOT EXISTS idx_photos_sha    ON photos(sha256);
 CREATE INDEX IF NOT EXISTS idx_photos_phash  ON photos(phash);
 CREATE INDEX IF NOT EXISTS idx_photos_status ON photos(status);
 CREATE INDEX IF NOT EXISTS idx_photos_album  ON photos(album_key);
+CREATE INDEX IF NOT EXISTS idx_photos_size   ON photos(size);
 
 CREATE TABLE IF NOT EXISTS albums(
     key            TEXT PRIMARY KEY,
@@ -51,14 +52,24 @@ CREATE TABLE IF NOT EXISTS albums(
 """
 
 
+SCHEMA_VERSION = 2  # suba ao mudar o esquema; a migração roda uma vez por banco
+_ready: set[str] = set()
+
+
 def connect() -> sqlite3.Connection:
     APP_DIR.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=NORMAL")
-    conn.executescript(SCHEMA)
-    _migrate(conn)
+    key = str(DB_PATH)
+    if key not in _ready:  # connect() é chamado a cada clique: o pesado só na primeira vez
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.executescript(SCHEMA)
+        if conn.execute("PRAGMA user_version").fetchone()[0] < SCHEMA_VERSION:
+            _migrate(conn)
+            conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
+            conn.commit()
+        _ready.add(key)
     return conn
 
 
@@ -109,12 +120,12 @@ def forget(conn: sqlite3.Connection, ids: list[int]) -> int:
     na próxima análise esses arquivos são tratados como novos (e podem ser enviados de novo)."""
     from .config import THUMBS_DIR
 
-    n = 0
+    params = [(i,) for i in ids]
+    # quem era cópia destes registros volta a ser avaliado do zero
+    conn.executemany("UPDATE photos SET duplicate_of=NULL, status='scanned' "
+                     "WHERE duplicate_of=? AND media_item_id IS NULL", params)
+    n = conn.executemany("DELETE FROM photos WHERE id=?", params).rowcount
     for i in ids:
-        # quem era cópia deste registro volta a ser avaliado do zero
-        conn.execute("UPDATE photos SET duplicate_of=NULL, status='scanned' "
-                     "WHERE duplicate_of=? AND media_item_id IS NULL", (i,))
-        n += conn.execute("DELETE FROM photos WHERE id=?", (i,)).rowcount
         try:
             (THUMBS_DIR / f"{i}.jpg").unlink()  # miniatura fica na pasta de dados do app
         except OSError:
@@ -140,10 +151,18 @@ def mark_not_duplicate(conn: sqlite3.Connection, ids: list[int]) -> int:
     return n
 
 
+def rows_under(conn: sqlite3.Connection, folder: str, select: str = "SELECT * FROM photos p") -> list:
+    """Registros dentro de uma pasta. O LIKE do SQLite filtra rápido (ignora maiúsculas em ASCII) e
+    a conferência final usa a mesma regra de caminho do resto do app."""
+    prefix = os.path.join(norm_path(folder), "")
+    key = os.path.join(path_key(folder), "")
+    pattern = prefix.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%"
+    rows = conn.execute(f"{select} WHERE p.path LIKE ? ESCAPE '!'", (pattern,)).fetchall()
+    return [r for r in rows if path_key(r["path"]).startswith(key)]
+
+
 def ids_under(conn: sqlite3.Connection, folder: str) -> list[int]:
-    prefix = os.path.join(path_key(folder), "")
-    return [r["id"] for r in conn.execute("SELECT id, path FROM photos")
-            if path_key(r["path"]).startswith(prefix)]
+    return [r["id"] for r in rows_under(conn, folder, "SELECT p.id, p.path FROM photos p")]
 
 
 def forget_all(conn: sqlite3.Connection) -> int:
@@ -171,25 +190,32 @@ def album_url(row) -> str | None:
 
 
 def summary(conn: sqlite3.Connection, cfg) -> dict:
+    """Contagens da tela inicial, agregadas pelo SQLite (rápido mesmo com muitas fotos)."""
     from .config import wants_upload
 
-    rows = conn.execute("SELECT * FROM photos").fetchall()
+    groups = conn.execute(
+        "SELECT duplicate_of IS NOT NULL AS dup, status, category, decision, source, "
+        "media_item_id IS NOT NULL AS sent, COUNT(*) AS n FROM photos GROUP BY 1, 2, 3, 4, 5, 6"
+    ).fetchall()
     out = {
-        "total": len(rows), "duplicadas": 0, "enviadas": 0, "a_enviar": 0,
+        "total": 0, "duplicadas": 0, "enviadas": 0, "a_enviar": 0,
         "erros": 0, "pendentes": 0, "por_categoria": {},
     }
-    for r in rows:
-        if r["duplicate_of"] is not None:
-            out["duplicadas"] += 1
+    for g in groups:
+        n = g["n"]
+        out["total"] += n
+        if g["dup"]:
+            out["duplicadas"] += n
             continue
-        if r["status"] == "scanned":
-            out["pendentes"] += 1
-        if r["category"]:
-            out["por_categoria"][r["category"]] = out["por_categoria"].get(r["category"], 0) + 1
-        if r["media_item_id"]:
-            out["enviadas"] += 1
-        elif r["status"] == "error":
-            out["erros"] += 1
-        elif r["status"] == "classified" and wants_upload(r, cfg):
-            out["a_enviar"] += 1
+        if g["status"] == "scanned":
+            out["pendentes"] += n
+        if g["category"]:
+            out["por_categoria"][g["category"]] = out["por_categoria"].get(g["category"], 0) + n
+        row = {"duplicate_of": None, "decision": g["decision"], "source": g["source"], "category": g["category"]}
+        if g["sent"]:
+            out["enviadas"] += n
+        elif g["status"] == "error":
+            out["erros"] += n
+        elif g["status"] == "classified" and wants_upload(row, cfg):
+            out["a_enviar"] += n
     return out

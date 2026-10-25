@@ -63,6 +63,10 @@ jobs:
         run: python tests/test_duplicatas_parecidas.py
       - name: Fotos do mesmo evento vão para o mesmo álbum
         run: python tests/test_evento_continua.py
+      - name: Robustez (rede, HD desplugado, IA depois, login, letra do HD, vídeos…)
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python tests/test_robustez.py
 
   # Gera a IA leve (CLIP -> ONNX int8). Fica em cache enquanto as frases/script não mudarem.
   modelo:
@@ -117,14 +121,16 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --upgrade pip wheel
-          pip install -r requirements.txt
+          # versões fixas (packaging/constraints-windows.txt): o instalador não quebra sozinho
+          pip install -r requirements.txt -c packaging/constraints-windows.txt
+          if ($LASTEXITCODE -ne 0) { throw "Falha ao instalar as dependências" }
           # PyInstaller com o "bootloader" compilado aqui mesmo: o bootloader padrão é usado por
           # muito malware e por isso é alvo de falsos positivos nos antivírus.
           $env:PYINSTALLER_COMPILE_BOOTLOADER = "1"
-          pip install --no-binary pyinstaller pyinstaller
+          pip install --no-binary pyinstaller pyinstaller -c packaging/constraints-windows.txt
           if ($LASTEXITCODE -ne 0) {
             Write-Warning "Não deu para compilar o bootloader; usando o padrão."
-            pip install pyinstaller
+            pip install pyinstaller -c packaging/constraints-windows.txt
           }
 
       - name: Conferir traduções
@@ -132,6 +138,9 @@ jobs:
 
       - name: Arquivos de origem nunca são alterados (no Windows)
         run: python tests/test_origem_intocada.py
+
+      - name: Robustez no Windows (inclui o login protegido pela DPAPI)
+        run: python tests/test_robustez.py
 
       - name: Gravar versão no app
         shell: pwsh

@@ -66,7 +66,8 @@ Para desinstalar: Configurações do Windows → Aplicativos → FotoFaxina.
    sem ser, use **Não é duplicata**: ela passa a ser enviada e isso vale nas próximas análises.
 6. **Envio**: cria os álbuns e sobe as fotos em lotes de 50. Tudo fica registrado num banco
    local; dá para parar, desligar o PC, plugar o HD em outra letra e continuar de onde parou,
-   sem enviar nada duas vezes.
+   sem enviar nada duas vezes. Se a internet oscilar, ele tenta de novo; se um lote falhar, os
+   outros continuam. Fotos de um HD que não está plugado ficam esperando, sem virar erro.
 
 ## Inteligência artificial (leve, sem internet, sem placa de vídeo)
 
@@ -79,6 +80,8 @@ classificadas.
   Desligada, o app usa só as regras (imagens do WhatsApp ficam como “Outro” para você decidir).
 - Por padrão a IA analisa só imagens do WhatsApp e de origem desconhecida — foto de câmera
   quase sempre é foto. Para analisar tudo: *Analisar também as fotos da câmera (mais lento)*.
+- Ligou a IA ou baixou o modelo depois da primeira análise? Na próxima análise ela refaz o
+  que tinha sido decidido sem ela (fotos do WhatsApp que ficaram como “Outro”).
 - Ajuste fino: *Confiança mínima da IA*. Itens abaixo dela aparecem no filtro
   **Baixa confiança** da aba Revisão.
 
@@ -162,7 +165,7 @@ O FotoFaxina não envia nenhuma informação para outros sistemas sem que você 
 analisadas no seu próprio computador (a IA roda localmente). A única comunicação de rede é com o
 **Google Fotos**, para enviar as fotos e criar os álbuns que você escolheu, depois que você conecta
 sua conta Google e clica em Enviar. O login fica salvo só no seu computador
-(`~/.fotofaxina/token.json`) e pode ser removido em Configurações → Desconectar.
+(`~/.fotofaxina/token.json`, protegido pela criptografia do Windows) e pode ser removido em Configurações → Desconectar.
 
 ## Licença
 

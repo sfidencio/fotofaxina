@@ -79,8 +79,10 @@ def main():
     torto = p.replace(os.sep + "IMG_", os.sep + "." + os.sep + "IMG_")
     conn.execute("INSERT INTO photos(path, sha256, status) SELECT ?, sha256, 'classified' FROM photos WHERE id=?",
                  (torto, rid))
+    conn.execute("PRAGMA user_version=0")  # banco de uma versão antiga
     conn.commit()
     conn.close()
+    db._ready.clear()  # como se o programa tivesse sido aberto de novo
     conn = db.connect()  # a migração roda ao conectar
     assert conn.execute("SELECT COUNT(*) FROM photos").fetchone()[0] == 3, "variações de caminho não foram unidas"
     assert conn.execute("SELECT media_item_id FROM photos WHERE id=?", (rid,)).fetchone()[0], "perdeu o envio"

@@ -31,6 +31,22 @@ def run_cli(folder: str) -> None:
         print(pipeline.enviar(cfg, progress=progress, log=lambda t: print(f"\n{t}")))
 
 
+def install_excepthook() -> None:
+    """Erros não tratados (num botão, numa thread) vão para o fotofaxina.log em vez de sumir —
+    o executável do Windows não tem console."""
+    import logging
+    import threading
+    import traceback
+
+    def hook(exc_type, exc, tb):
+        logging.error("Erro não tratado:\n%s", "".join(traceback.format_exception(exc_type, exc, tb)))
+        if sys.__stderr__ is not None:
+            sys.__excepthook__(exc_type, exc, tb)
+
+    sys.excepthook = hook
+    threading.excepthook = lambda a: hook(a.exc_type, a.exc_value, a.exc_traceback)
+
+
 def main() -> None:
     if "--baixar-ia" in sys.argv:
         from app import model_download
@@ -38,7 +54,11 @@ def main() -> None:
         model_download.download_model(log=print)
         return
     if "--cli" in sys.argv:
-        run_cli(sys.argv[sys.argv.index("--cli") + 1])
+        i = sys.argv.index("--cli") + 1
+        if i >= len(sys.argv):
+            print("Uso: python main.py --cli PASTA [--enviar]")
+            return
+        run_cli(sys.argv[i])
         return
 
     from PySide6.QtCore import QLockFile
@@ -52,7 +72,9 @@ def main() -> None:
 
     cfg = Config.load()
     lang = set_language(cfg.language)
-    from app.gui.main_window import MainWindow
+    from app.gui.main_window import MainWindow  # também configura o fotofaxina.log
+
+    install_excepthook()
 
     app = QApplication(sys.argv)
     # botões padrão do Qt (Sim/Não, Cancelar...) no idioma escolhido

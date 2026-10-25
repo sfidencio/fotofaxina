@@ -9,6 +9,7 @@ import os
 import shutil
 import time
 
+from . import secure_store
 from .config import CLIENT_SECRET_PATH, TOKEN_PATH, resource
 from .i18n import _
 
@@ -58,6 +59,35 @@ def disconnect() -> None:
         TOKEN_PATH.unlink()
 
 
+def EXPIRED_MSG() -> str:  # função: o idioma é escolhido depois do import
+    return _("O login no Google expirou (enquanto o app está em modo de teste no Google Cloud, isso "
+             "acontece a cada 7 dias). Clique em “Conectar conta Google” na aba Configurações.")
+
+
+def load_credentials():
+    """Lê o login salvo (protegido pela criptografia do Windows quando disponível)."""
+    import json
+
+    from google.oauth2.credentials import Credentials
+
+    if not TOKEN_PATH.exists():
+        return None
+    data = TOKEN_PATH.read_bytes()
+    try:
+        info = json.loads(secure_store.unprotect(data).decode("utf-8"))
+        creds = Credentials.from_authorized_user_info(info, SCOPES)
+    except Exception:
+        return None  # arquivo corrompido ou de outro usuário do Windows: pede login de novo
+    if secure_store.needs_upgrade(data):
+        save_credentials(creds)  # token de versão antiga, em texto: protege agora
+    return creds
+
+
+def save_credentials(creds) -> None:
+    TOKEN_PATH.parent.mkdir(parents=True, exist_ok=True)
+    secure_store.write_private(TOKEN_PATH, secure_store.protect(creds.to_json().encode("utf-8")))
+
+
 class GooglePhotos:
     def __init__(self):
         self.session = None
@@ -66,20 +96,21 @@ class GooglePhotos:
     def connect(self, interactive: bool = True) -> None:
         from google.auth.exceptions import RefreshError
         from google.auth.transport.requests import AuthorizedSession, Request
-        from google.oauth2.credentials import Credentials
         from google_auth_oauthlib.flow import InstalledAppFlow
 
-        creds = None
-        if TOKEN_PATH.exists():
-            creds = Credentials.from_authorized_user_file(str(TOKEN_PATH), SCOPES)
+        creds = load_credentials()
+        expired = False
         if creds and not creds.valid and creds.expired and creds.refresh_token:
             try:
                 creds.refresh(Request())
             except RefreshError:
-                creds = None  # app em modo "Teste" expira o token em 7 dias
+                # app em modo "Teste" no Google Cloud: o login vale 7 dias. Apaga o token para a
+                # tela não continuar dizendo "conectada".
+                creds, expired = None, True
+                disconnect()
         if not creds or not creds.valid:
             if not interactive:
-                raise NotConnected(_("Conecte sua conta Google na aba Configurações."))
+                raise NotConnected(EXPIRED_MSG() if expired else _("Conecte sua conta Google na aba Configurações."))
             if not has_client_secret():
                 raise NotConnected(_("Selecione o arquivo client_secret.json na aba Configurações."))
             flow = InstalledAppFlow.from_client_secrets_file(str(secret_path()), SCOPES)
@@ -88,20 +119,35 @@ class GooglePhotos:
                 authorization_prompt_message=_("Abrindo o navegador para login no Google…"),
                 success_message=_("Pronto! Pode fechar esta aba e voltar ao FotoFaxina."),
             )
-        TOKEN_PATH.write_text(creds.to_json(), encoding="utf-8")
+        save_credentials(creds)
         self.session = AuthorizedSession(creds)
 
     # ---------- HTTP com retentativa ----------
     def _request(self, method: str, url: str, *, body_path: str | None = None, **kw):
         if self.session is None:
             raise NotConnected(_("Conta Google não conectada."))
+        import requests
+        from google.auth.exceptions import RefreshError
+
         delay = 2.0
+        resp = None
         for attempt in range(7):
-            if body_path is not None:
-                with open(body_path, "rb") as fh:
-                    resp = self.session.request(method, url, data=fh, timeout=600, **kw)
-            else:
-                resp = self.session.request(method, url, timeout=120, **kw)
+            try:
+                if body_path is not None:
+                    with open(body_path, "rb") as fh:
+                        resp = self.session.request(method, url, data=fh, timeout=600, **kw)
+                else:
+                    resp = self.session.request(method, url, timeout=120, **kw)
+            except RefreshError as e:  # o login expirou no meio do envio
+                disconnect()
+                raise NotConnected(EXPIRED_MSG()) from e
+            except (requests.ConnectionError, requests.Timeout) as e:
+                # internet caiu ou oscilou: espera e tenta de novo
+                if attempt == 6:
+                    raise GooglePhotosError(_("Sem conexão com o Google Fotos: {erro}").format(erro=e)) from e
+                time.sleep(delay)
+                delay = min(delay * 2, 60)
+                continue
             if resp.status_code < 400:
                 return resp
             if resp.status_code == 429:

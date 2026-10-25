@@ -1,7 +1,10 @@
 """Janela principal + ícone na bandeja do sistema."""
 from __future__ import annotations
 
+import copy
 import logging
+import os
+from logging.handlers import RotatingFileHandler
 
 from PySide6.QtCore import QThreadPool, Qt, QTimer
 from PySide6.QtGui import QAction, QCloseEvent, QIcon, QPixmap
@@ -17,7 +20,11 @@ from .tabs import AlbunsTab, ConfigTab, InicioTab, RevisaoTab
 from .workers import Job
 
 APP_DIR.mkdir(parents=True, exist_ok=True)
-logging.basicConfig(filename=LOG_PATH, level=logging.INFO, format="%(asctime)s %(message)s", encoding="utf-8")
+# registro com no máximo ~3 MB (3 arquivos de 1 MB), para não crescer para sempre
+_handler = RotatingFileHandler(LOG_PATH, maxBytes=1_000_000, backupCount=2, encoding="utf-8")
+_handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
+logging.getLogger().addHandler(_handler)
+logging.getLogger().setLevel(logging.INFO)
 
 
 class MainWindow(QMainWindow):
@@ -26,6 +33,7 @@ class MainWindow(QMainWindow):
         self.cfg = cfg
         self.root: str | None = None
         self.job: Job | None = None
+        self.pending_drive: tuple[str, str] | None = None  # HD plugado durante outra tarefa
         self.pool = QThreadPool.globalInstance()
         self.quitting = False
 
@@ -140,22 +148,38 @@ class MainWindow(QMainWindow):
         if self.job is not None:
             QMessageBox.information(self, _("Aguarde"), _("Já existe uma tarefa em andamento."))
             return False
+        # a tarefa usa uma cópia da configuração: salvar Configurações no meio não muda a regra
+        # de uma análise ou envio que já começou
+        args = tuple(copy.deepcopy(a) if isinstance(a, Config) else a for a in args)
         self.job = Job(name, fn, *args)
         self.job.signals.progress.connect(self.inicio.set_progress)
         self.job.signals.log.connect(self.log)
         self.job.signals.finished.connect(self._job_done)
         self.job.signals.failed.connect(self._job_failed)
-        self.inicio.set_busy(True)
+        self._set_busy(True)
         self.pool.start(self.job)
         return True
 
+    def _set_busy(self, busy: bool):
+        # ações que apagam histórico ou o login ficam bloqueadas enquanto uma tarefa usa o banco
+        self.inicio.set_busy(busy)
+        self.revisao.set_busy(busy)
+        self.config_tab.set_busy(busy)
+
     def _clear_job(self):
         self.job = None
-        self.inicio.set_busy(False)
+        self._set_busy(False)
         self.inicio.bar.setRange(0, 1)
         self.refresh_summary()
+        if self.pending_drive is not None:
+            mountpoint, label = self.pending_drive
+            self.pending_drive = None
+            if os.path.exists(mountpoint):  # continua plugado
+                QTimer.singleShot(0, lambda: self.on_drive_added(mountpoint, label))
 
     def _job_done(self, name: str, res):
+        # um HD que estava na fila começa logo depois (se um envio automático começar antes,
+        # ele volta para a fila e é analisado ao fim do envio)
         self._clear_job()
         if name == "analisar":
             if isinstance(res, dict) and not res.get("parado"):
@@ -179,6 +203,8 @@ class MainWindow(QMainWindow):
         elif name == "enviar":
             msg = _("{ok} enviados, {err} com erro.").format(ok=res.get("enviados_agora", 0),
                                                              err=res.get("erros_agora", 0))
+            if res.get("ausentes_agora"):
+                msg += " " + _("{n} aguardam o HD de origem ser plugado.").format(n=res["ausentes_agora"])
             self.notify(_("Envio concluído"), msg)
         elif name == "conectar":
             QMessageBox.information(self, _("Google Fotos"), _("Conta conectada com sucesso!"))
@@ -193,7 +219,9 @@ class MainWindow(QMainWindow):
     def _job_failed(self, name: str, err: str):
         self._clear_job()
         self.log(_("Erro em {tarefa}: {erro}").format(tarefa=name, erro=err))
-        QMessageBox.warning(self, _("Erro"), err)
+        self.notify(_("Erro"), err)
+        if self.isVisible():
+            QMessageBox.warning(self, _("Erro"), err)
 
     def start_analyze(self):
         if not self.root:
@@ -264,6 +292,7 @@ class MainWindow(QMainWindow):
     def on_drive_added(self, mountpoint: str, label: str):
         self.log(_("HD detectado: {nome}").format(nome=label))
         if self.job is not None:
+            self.pending_drive = (mountpoint, label)
             self.notify(_("HD detectado"), _("{nome} — será analisado quando a tarefa atual terminar.").format(nome=label))
             return
         if self.cfg.auto_scan_on_drive:

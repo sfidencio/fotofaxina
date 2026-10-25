@@ -2,6 +2,7 @@
 ou teve o modelo apagado). Grava só em ~/.fotofaxina/models — nada mais é tocado."""
 from __future__ import annotations
 
+import hashlib
 import io
 import shutil
 import zipfile
@@ -10,7 +11,24 @@ from .config import APP_DIR
 from .i18n import _
 
 MODEL_URL = "https://github.com/sfidencio/fotofaxina/releases/latest/download/fotofaxina-ia-modelo.zip"
+SUMS_URL = "https://github.com/sfidencio/fotofaxina/releases/latest/download/SHA256SUMS.txt"
+ZIP_NAME = "fotofaxina-ia-modelo.zip"
 FILES = ("clip_image.onnx", "clip_text.npy", "clip_labels.json")
+
+
+def expected_sha256(requests) -> str | None:
+    """Soma de verificação publicada junto com o modelo na mesma versão (SHA256SUMS.txt)."""
+    try:
+        resp = requests.get(SUMS_URL, timeout=30)
+    except requests.RequestException:
+        return None
+    if resp.status_code != 200:
+        return None
+    for line in resp.text.splitlines():
+        parts = line.split()
+        if len(parts) == 2 and parts[1].lstrip("*") == ZIP_NAME:
+            return parts[0].lower()
+    return None
 
 
 def download_model(progress=None, log=None, stop=None) -> bool:
@@ -35,6 +53,16 @@ def download_model(progress=None, log=None, stop=None) -> bool:
             buf.write(chunk)
             done += len(chunk)
             progress(stage, done // 1024, total // 1024, f"{done / 1e6:.0f} MB")
+
+    expected = expected_sha256(requests)
+    got = hashlib.sha256(buf.getbuffer()).hexdigest()
+    if expected is None:
+        log(_("Não encontrei a soma de verificação do modelo; conferindo só o conteúdo do arquivo."))
+    elif got != expected:
+        raise RuntimeError(_("O arquivo do modelo chegou corrompido (a soma de verificação não confere). "
+                             "Tente baixar de novo."))
+    else:
+        log(_("Soma de verificação do modelo conferida."))
 
     tmp = APP_DIR / "models.tmp"
     shutil.rmtree(tmp, ignore_errors=True)
