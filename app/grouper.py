@@ -83,33 +83,59 @@ def plan_years(items: list[tuple[int, datetime, str, str]], title_tpl: str):
     return {k: tuple(v) for k, v in albums.items()}
 
 
-def plan_albums(items: list[tuple[int, datetime, str]], gap_hours: float, min_size: int):
-    """items: (id, data, origem_da_data). Retorna {album_key: (titulo, inicio, fim, [ids])}."""
+def plan_albums(items: list[tuple[int, datetime, str]], gap_hours: float, min_size: int,
+                anchors: list[tuple[datetime, str]] = (), previous: dict[int, str] | None = None):
+    """items: (id, data, origem_da_data). Retorna {album_key: (titulo, inicio, fim, [ids])}.
+
+    anchors: (data, album_key) das fotos JÁ ENVIADAS para álbuns de evento. Uma foto nova do mesmo
+    evento (ex.: do celular da esposa, analisado depois) vai para o mesmo álbum, em vez de virar
+    outro álbum no Google Fotos.
+    previous: {id: album_key} atual. Um evento ainda não enviado que cresceu mantém a chave — e o
+    nome que o usuário deu na aba Álbuns."""
     albums: dict[str, list] = {}
+    previous = previous or {}
 
     def add(key, title, ids, start, end):
         a = albums.setdefault(key, [title, start, end, []])
         a[1], a[2] = min(a[1], start), max(a[2], end)
         a[3].extend(ids)
 
-    reliable = sorted((i for i in items if i[2] != "arquivo"), key=lambda x: x[1])
+    reliable = [i for i in items if i[2] != "arquivo"]
     unreliable = [i for i in items if i[2] == "arquivo"]
 
+    # linha do tempo com as fotos novas e as já enviadas: (data, é_âncora, id ou chave)
+    timeline = sorted([(i[1], 0, i[0]) for i in reliable] + [(dt, 1, key) for dt, key in anchors],
+                      key=lambda x: (x[0], x[1]))
     events: list[list] = []
     gap = timedelta(hours=gap_hours)
-    for it in reliable:
-        if events and it[1] - events[-1][-1][1] <= gap:
-            events[-1].append(it)
+    for t in timeline:
+        if events and t[0] - events[-1][-1][0] <= gap:
+            events[-1].append(t)
         else:
-            events.append([it])
+            events.append([t])
 
+    used: set[str] = set()
     for ev in events:
-        start, end = ev[0][1], ev[-1][1]
-        if len(ev) >= min_size:
-            add(f"evt-{start:%Y%m%d-%H%M}", event_title(start, end), [i[0] for i in ev], start, end)
+        pend = [(dt, pid) for dt, anchor, pid in ev if not anchor]
+        anc = [(dt, key) for dt, anchor, key in ev if anchor]
+        if not pend:
+            continue
+        if anc:
+            # evento que já tem álbum no Google: cada foto nova vai para o álbum da foto enviada
+            # mais próxima no tempo
+            for dt, pid in pend:
+                key = min(anc, key=lambda a: abs(a[0] - dt))[1]
+                add(key, event_title(dt, dt), [pid], dt, dt)
+        elif len(pend) >= min_size:
+            start, end = pend[0][0], pend[-1][0]
+            olds = [previous[pid] for _, pid in pend if (previous.get(pid) or "").startswith("evt-")]
+            olds = [k for k in olds if k not in used]
+            key = max(set(olds), key=olds.count) if olds else f"evt-{start:%Y%m%d-%H%M}"
+            used.add(key)
+            add(key, event_title(start, end), [pid for _, pid in pend], start, end)
         else:
-            for it in ev:
-                add(f"mes-{it[1]:%Y-%m}", month_title(it[1]), [it[0]], it[1], it[1])
+            for dt, pid in pend:
+                add(f"mes-{dt:%Y-%m}", month_title(dt), [pid], dt, dt)
 
     # data só do arquivo (pode ser a data da cópia): nunca vira evento
     for it in unreliable:
@@ -137,7 +163,14 @@ def group(cfg, log=None) -> int:
     elif cfg.album_mode == "mes":
         plan = plan_albums([i[:3] for i in items], gap_hours=0, min_size=10**9)
     else:
-        plan = plan_albums([i[:3] for i in items], cfg.event_gap_hours, cfg.min_event_size)
+        anchors = [
+            (datetime.fromisoformat(r["taken_at"]), r["album_key"]) for r in conn.execute(
+                "SELECT taken_at, album_key FROM photos WHERE media_item_id IS NOT NULL "
+                "AND album_key LIKE 'evt-%' AND date_source != 'arquivo' AND taken_at IS NOT NULL")
+        ]
+        previous = {r["id"]: r["album_key"] for r in rows}
+        plan = plan_albums([i[:3] for i in items], cfg.event_gap_hours, cfg.min_event_size,
+                           anchors=anchors, previous=previous)
     for key, (title, start, end, ids) in plan.items():
         existing = conn.execute("SELECT * FROM albums WHERE key=?", (key,)).fetchone()
         if existing is None:

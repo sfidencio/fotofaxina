@@ -186,6 +186,10 @@ class RevisaoTab(QWidget):
         for k in CATEGORIES:
             self.move_combo.addItem(cat_label(k), k)
         btn_move = QPushButton(_("Mudar categoria"))
+        btn_notdup = QPushButton(_("Não é duplicata"))
+        btn_notdup.setToolTip(_("Para fotos parecidas, mas diferentes (sequência, rajada): passam a ser "
+                                "enviadas e não são mais tratadas como cópia."))
+        btn_notdup.clicked.connect(self._not_duplicate)
         btn_forget = QPushButton(_("Esquecer selecionadas…"))
         btn_forget.setToolTip(_("Remove os itens do histórico do FotoFaxina (não apaga nenhum arquivo)."))
         btn_forget.clicked.connect(self._forget_selected)
@@ -195,7 +199,8 @@ class RevisaoTab(QWidget):
         btn_move.clicked.connect(self._move_category)
 
         bottom = QHBoxLayout()
-        for w in (btn_send, btn_skip, btn_auto, QLabel(" | "), self.move_combo, btn_move):
+        for w in (btn_send, btn_skip, btn_auto, QLabel(" | "), self.move_combo, btn_move,
+                  QLabel(" | "), btn_notdup):
             bottom.addWidget(w)
         bottom.addStretch()
         bottom.addWidget(btn_forget)
@@ -332,6 +337,20 @@ class RevisaoTab(QWidget):
         )
         conn.commit()
         conn.close()
+        self.reload()
+        self.changed.emit()
+
+    def _not_duplicate(self):
+        ids = self._selected_ids()
+        if not ids:
+            return
+        conn = db.connect()
+        n = db.mark_not_duplicate(conn, ids)
+        conn.close()
+        if n:
+            QMessageBox.information(self, _("Não é duplicata"), _(
+                "{n} item(ns) não serão mais tratados como cópia. Eles são classificados na próxima "
+                "análise ou no próximo envio.").format(n=n))
         self.reload()
         self.changed.emit()
 

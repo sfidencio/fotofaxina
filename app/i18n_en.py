@@ -243,4 +243,11 @@ EN: dict[str, str] = {
         "AI model installed. It will be used in the next analysis.",
     "O novo idioma vale a partir da próxima vez que o FotoFaxina for aberto.":
         "The new language takes effect the next time FotoFaxina is opened.",
+    "Não é duplicata": "Not a duplicate",
+    "Para fotos parecidas, mas diferentes (sequência, rajada): passam a ser enviadas e não são mais tratadas como cópia.":
+        "For photos that look alike but are different (sequence, burst): they will be uploaded and "
+        "no longer treated as copies.",
+    "{n} item(ns) não serão mais tratados como cópia. Eles são classificados na próxima análise ou no próximo envio.":
+        "{n} item(s) will no longer be treated as copies. They are classified in the next analysis "
+        "or upload.",
 }

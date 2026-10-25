@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS photos(
     decision      TEXT,              -- upload | skip | NULL (automático)
     status        TEXT DEFAULT 'scanned',   -- scanned | classified | uploaded | error
     media_item_id TEXT,
-    error         TEXT
+    error         TEXT,
+    not_duplicate INTEGER DEFAULT 0  -- usuário disse "Não é duplicata": não comparar por semelhança
 );
 CREATE INDEX IF NOT EXISTS idx_photos_sha    ON photos(sha256);
 CREATE INDEX IF NOT EXISTS idx_photos_phash  ON photos(phash);
@@ -66,6 +67,10 @@ def _migrate(conn: sqlite3.Connection) -> None:
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(albums)")}
     if "product_url" not in cols:
         conn.execute("ALTER TABLE albums ADD COLUMN product_url TEXT")
+        conn.commit()
+    pcols = {r["name"] for r in conn.execute("PRAGMA table_info(photos)")}
+    if "not_duplicate" not in pcols:
+        conn.execute("ALTER TABLE photos ADD COLUMN not_duplicate INTEGER DEFAULT 0")
         conn.commit()
     _merge_path_variants(conn)
 
@@ -117,6 +122,20 @@ def forget(conn: sqlite3.Connection, ids: list[int]) -> int:
     # álbuns que já existem no Google ficam: um novo envio volta para o mesmo álbum
     conn.execute("DELETE FROM albums WHERE google_id IS NULL AND key NOT IN "
                  "(SELECT DISTINCT album_key FROM photos WHERE album_key IS NOT NULL)")
+    conn.commit()
+    return n
+
+
+def mark_not_duplicate(conn: sqlite3.Connection, ids: list[int]) -> int:
+    """O usuário diz que a foto não é cópia de outra (ex.: fotos em sequência quase iguais).
+    Vale para sempre: a comparação por semelhança deixa de considerá-la."""
+    n = 0
+    for i in ids:
+        n += conn.execute(
+            "UPDATE photos SET not_duplicate=1, duplicate_of=NULL, "
+            "status=CASE WHEN category IS NULL THEN 'scanned' ELSE 'classified' END "
+            "WHERE id=? AND media_item_id IS NULL", (i,)
+        ).rowcount
     conn.commit()
     return n
 

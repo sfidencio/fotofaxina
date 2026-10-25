@@ -217,24 +217,39 @@ def _keeper_score(r) -> tuple:
     )
 
 
+def same_shot(a, b) -> bool:
+    """Hash perceptual igual não basta para dizer que é a mesma foto: fotos em sequência (rajada,
+    HDR, a luz mudando entre um clique e outro) dão o mesmo hash e são fotos DIFERENTES. Quando as
+    duas têm a data gravada pela câmera (EXIF), só são a mesma foto se a data e a câmera baterem.
+    Uma cópia reenviada pelo WhatsApp perde o EXIF e continua sendo reconhecida como cópia."""
+    if a["date_source"] == "exif" and b["date_source"] == "exif":
+        return a["taken_at"] == b["taken_at"] and (a["camera"] or "") == (b["camera"] or "")
+    return True
+
+
 def mark_duplicates(conn) -> int:
-    """Duplicata exata (mesmo SHA-256) ou quase-duplicata (mesmo hash perceptual)."""
+    """Duplicata exata (mesmo SHA-256) ou quase-duplicata (mesmo hash perceptual e mesma foto)."""
     conn.execute("UPDATE photos SET duplicate_of=NULL WHERE media_item_id IS NULL")
     rows = conn.execute(
-        "SELECT id, path, sha256, phash, width, height, size, source, media_item_id, is_video FROM photos"
+        "SELECT id, path, sha256, phash, width, height, size, source, media_item_id, is_video, "
+        "taken_at, date_source, camera, not_duplicate FROM photos"
     ).fetchall()
 
-    def resolve(groups):
+    def resolve(groups, check=None):
         n = 0
         for members in groups.values():
             if len(members) < 2:
                 continue
             members.sort(key=_keeper_score, reverse=True)
-            keeper = members[0]["id"]
-            for m in members[1:]:
+            keepers: list = []
+            for m in members:
+                keeper = next((k for k in keepers if check is None or check(k, m)), None)
+                if keeper is None:
+                    keepers.append(m)  # outra foto: fica (e pode ser o original de outras cópias)
+                    continue
                 if m["media_item_id"]:
                     continue
-                conn.execute("UPDATE photos SET duplicate_of=? WHERE id=?", (keeper, m["id"]))
+                conn.execute("UPDATE photos SET duplicate_of=? WHERE id=?", (keeper["id"], m["id"]))
                 dup_ids.add(m["id"])
                 n += 1
         return n
@@ -247,10 +262,11 @@ def mark_duplicates(conn) -> int:
 
     by_phash: dict[str, list] = {}
     for r in rows:
-        if r["is_video"] or not r["phash"] or r["phash"] in BLANK_HASHES or r["id"] in dup_ids:
+        if (r["is_video"] or not r["phash"] or r["phash"] in BLANK_HASHES or r["id"] in dup_ids
+                or r["not_duplicate"]):
             continue
         by_phash.setdefault(r["phash"], []).append(r)
-    total += resolve(by_phash)
+    total += resolve(by_phash, check=same_shot)
     # quem deixou de ser duplicata e nunca foi classificado (duplicatas pulam a IA) volta para a fila
     conn.execute(
         "UPDATE photos SET status='scanned' WHERE duplicate_of IS NULL AND category IS NULL "

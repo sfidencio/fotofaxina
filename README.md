@@ -45,6 +45,8 @@ Para desinstalar: Configurações do Windows → Aplicativos → FotoFaxina.
 1. **Plugou o HD** → o app detecta e começa a análise sozinho.
 2. **Varredura**: lê cada arquivo, calcula hash (duplicata exata) e hash perceptual
    (a mesma foto reenviada/recomprimida pelo WhatsApp), lê data e câmera do EXIF.
+   Fotos em sequência quase iguais (rajada, a luz mudando) **não** são tratadas como cópia
+   quando a câmera gravou horários diferentes.
 3. **Classificação**:
    - **Regras rápidas**: `IMG-20240101-WA0001.jpg` = WhatsApp, `Screenshot_…` = print,
      `.webp` do WhatsApp = figurinha, imagens minúsculas = ícone/lixo, foto com EXIF de câmera = foto.
@@ -52,14 +54,16 @@ Para desinstalar: Configurações do Windows → Aplicativos → FotoFaxina.
      foto pessoal, paisagem, meme, print ou documento. Veja abaixo.
 4. **Álbuns** — escolha em Configurações → “Organizar álbuns”:
    - **Por evento** (padrão): fotos próximas no tempo (sem intervalo maior que 24h e com 8+
-     fotos) viram “Evento 24 a 26/12/2023”; o resto vai para o álbum do mês.
+     fotos) viram “Evento 24 a 26/12/2023”; o resto vai para o álbum do mês. Fotos do mesmo
+     evento analisadas depois (ex.: o celular da esposa) entram no álbum que já foi enviado.
    - **Por mês**: “Dezembro de 2023”.
    - **Por ano**: “Fotos 2023” (nome configurável). Ideal para HDs organizados em pastas
      `2020/`, `2021/`… A data real da foto (EXIF ou nome do arquivo) manda; sem data, vale o
      ano da pasta (`2021/Celular da esposa/foto.jpg` → 2021); sem nenhum dos dois, vai para
      “Fotos sem data”.
 5. **Revisão** (opcional): grade de miniaturas com filtros. Selecione e marque
-   “Enviar” / “Não enviar” / “Mudar categoria”.
+   “Enviar” / “Não enviar” / “Mudar categoria”. Se uma foto parecida foi tratada como cópia
+   sem ser, use **Não é duplicata**: ela passa a ser enviada e isso vale nas próximas análises.
 6. **Envio**: cria os álbuns e sobe as fotos em lotes de 50. Tudo fica registrado num banco
    local; dá para parar, desligar o PC, plugar o HD em outra letra e continuar de onde parou,
    sem enviar nada duas vezes.

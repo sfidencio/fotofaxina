@@ -49,12 +49,16 @@ def folder_summary(conn, root: str, cfg: Config) -> dict:
     return out
 
 
-def reagrupar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
-    grouper.group(cfg, log)
+def _summary(cfg: Config) -> dict:
     conn = db.connect()
     res = db.summary(conn, cfg)
     conn.close()
     return res
+
+
+def reagrupar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
+    grouper.group(cfg, log)
+    return _summary(cfg)
 
 
 def conectar_google(progress=_noop, log=_noop, stop=None) -> bool:
@@ -64,6 +68,10 @@ def conectar_google(progress=_noop, log=_noop, stop=None) -> bool:
 
 
 def enviar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
+    # itens que ficaram pendentes (ex.: marcados como "Não é duplicata" na Revisão)
+    classifier.classify(cfg, progress, log, stop)
+    if stop is not None and stop.is_set():
+        return {**_summary(cfg), "enviados_agora": 0, "erros_agora": 0, "albuns_novos": []}
     grouper.group(cfg, log)
     gp = GooglePhotos()
     gp.connect(interactive=False)

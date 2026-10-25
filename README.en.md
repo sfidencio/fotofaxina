@@ -46,6 +46,8 @@ To uninstall: Windows Settings → Apps → FotoFaxina.
 1. **Drive plugged in** → the app notices and starts the analysis on its own.
 2. **Scan**: reads every file, computes a hash (exact duplicates) and a perceptual hash (the same
    photo re-sent/recompressed by WhatsApp), and reads the date and camera from EXIF.
+   Nearly identical photos taken in sequence (burst, changing light) are **not** treated as
+   copies when the camera recorded different times.
 3. **Classification**:
    - **Fast rules**: `IMG-20240101-WA0001.jpg` = WhatsApp, `Screenshot_…` = screenshot, WhatsApp
      `.webp` = sticker, tiny images = icons/junk, photo with camera EXIF = photo.
@@ -53,14 +55,16 @@ To uninstall: Windows Settings → Apps → FotoFaxina.
      photo, landscape, meme, screenshot or document. See below.
 4. **Albums** — choose in Settings → “Organize albums”:
    - **By event** (default): photos close in time (no gap longer than 24h, 8+ photos) become
-     “Event Dec 24 – Dec 26, 2023”; the rest goes to the month album.
+     “Event Dec 24 – Dec 26, 2023”; the rest goes to the month album. Photos from the same
+     event analyzed later (e.g. your spouse's phone) go into the album already uploaded.
    - **By month**: “December 2023”.
    - **By year**: “Photos 2023” (name is configurable). Ideal for drives already organized in
      `2020/`, `2021/`… folders. The photo's real date (EXIF or file name) wins; without one, the
      folder year is used (`2021/Wife's phone/photo.jpg` → 2021); with neither, it goes to
      “Photos without date”.
 5. **Review** (optional): thumbnail grid with filters. Select and mark
-   “Upload” / “Don't upload” / “Change category”.
+   “Upload” / “Don't upload” / “Change category”. If a similar photo was treated as a copy
+   but isn't one, use **Not a duplicate**: it will be uploaded, and this sticks in later analyses.
 6. **Upload**: creates the albums and uploads in batches of 50. Everything is recorded in a local
    database; you can stop, turn off the PC, plug the drive in with another letter and continue
    where it left off, never uploading anything twice.
