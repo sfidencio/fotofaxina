@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 from .. import autostart, classifier, db, google_photos
 from ..config import CATEGORIES, SOURCES, TOKEN_PATH, Config, resource, wants_upload
 from ..i18n import LANGUAGES, _, language
+from .icons import set_icon
 from .workers import ThumbJob
 
 PAGE = 300
@@ -67,6 +68,10 @@ class InicioTab(QWidget):
                                      "(não apaga nenhum arquivo)."))
         self.btn_forget.clicked.connect(lambda: self.forget_folder.emit())
         self.btn_stop.setEnabled(False)
+        for b, name, tone in ((self.btn_folder, "folder", None), (self.btn_analyze, "analyze", "accent"),
+                              (self.btn_upload, "upload", "accent"), (self.btn_stop, "stop", None),
+                              (self.btn_retry, "retry", None), (self.btn_forget, "eraser", "danger")):
+            set_icon(b, name, tone)
         for b, sig in ((self.btn_folder, self.choose_folder), (self.btn_analyze, self.analyze),
                        (self.btn_upload, self.upload), (self.btn_stop, self.stop),
                        (self.btn_retry, self.retry_errors)):
@@ -198,6 +203,10 @@ class RevisaoTab(QWidget):
         btn_skip.clicked.connect(lambda: self._set_decision("skip"))
         btn_auto.clicked.connect(lambda: self._set_decision(None))
         btn_move.clicked.connect(self._move_category)
+        for b, name, tone in ((btn_send, "check", "accent"), (btn_skip, "skip", None), (btn_auto, "auto", None),
+                              (btn_move, "tag", None), (btn_notdup, "notdup", None),
+                              (btn_forget, "eraser", "danger"), (self.btn_more, "more", None)):
+            set_icon(b, name, tone)
 
         bottom = QHBoxLayout()
         for w in (btn_send, btn_skip, btn_auto, QLabel(" | "), self.move_combo, btn_move,
@@ -419,6 +428,8 @@ class AlbunsTab(QWidget):
         self.btn_share.clicked.connect(self._open_album)
         btn = QPushButton(_("Reagrupar (após mudar configurações)"))
         btn.clicked.connect(lambda: self.regroup.emit())
+        set_icon(self.btn_share, "share", "accent")
+        set_icon(btn, "regroup")
         share_hint = QLabel(_(
             "Para compartilhar: selecione um álbum já enviado → “Abrir no Google Fotos para "
             "compartilhar” → no navegador, clique em <b>Compartilhar</b> e digite os e-mails. "
@@ -534,6 +545,7 @@ class ConfigTab(QWidget):
         il.addRow(self.ai_status)
         self.btn_ai = QPushButton(_("Baixar modelo de IA (~96 MB)"))
         self.btn_ai.clicked.connect(lambda: self.download_ai.emit())
+        set_icon(self.btn_ai, "download", "accent")
         il.addRow(self.btn_ai)
 
         proc = QGroupBox(_("Álbuns"))
@@ -585,6 +597,9 @@ class ConfigTab(QWidget):
         b2.clicked.connect(lambda: self.connect_google.emit())
         b3.clicked.connect(self._disconnect)
         self._busy_buttons = [b1, b2, b3]
+        set_icon(b1, "file")
+        set_icon(b2, "login", "accent")
+        set_icon(b3, "logout")
         row = QHBoxLayout()
         for b in (b1, b2, b3):
             row.addWidget(b)
@@ -600,11 +615,13 @@ class ConfigTab(QWidget):
         btn_clear = QPushButton(_("Limpar todo o histórico…"))
         btn_clear.clicked.connect(self._forget_all)
         self._busy_buttons.append(btn_clear)
+        set_icon(btn_clear, "trash", "danger")
         hl.addWidget(hist_lbl, 1)
         hl.addWidget(btn_clear)
 
         save = QPushButton(_("Salvar configurações"))
         save.clicked.connect(self._save)
+        set_icon(save, "save", "accent")
 
         lay = QVBoxLayout(self)
         top = QHBoxLayout()

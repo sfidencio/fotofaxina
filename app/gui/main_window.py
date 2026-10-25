@@ -16,6 +16,7 @@ from .. import __version__, db, google_photos, pipeline
 from ..config import APP_DIR, APP_NAME, LOG_PATH, TOKEN_PATH, Config, resource
 from ..drive_watcher import DriveWatcher
 from ..i18n import _
+from .icons import icon as make_icon
 from .tabs import AlbunsTab, ConfigTab, InicioTab, RevisaoTab
 from .workers import Job
 
@@ -70,8 +71,9 @@ class MainWindow(QMainWindow):
         # bandeja
         self.tray = QSystemTrayIcon(icon, self)
         menu = QMenu()
-        for text, slot in ((_("Abrir"), self.show_normal), (_("Parar tarefa"), self.stop_job), (_("Sair"), self.quit_app)):
-            act = QAction(text, self)
+        for text, slot, name in ((_("Abrir"), self.show_normal, "open"), (_("Parar tarefa"), self.stop_job, "stop"),
+                                 (_("Sair"), self.quit_app, "quit")):
+            act = QAction(make_icon(name), text, self)
             act.triggered.connect(slot)
             menu.addAction(act)
         self.tray.setContextMenu(menu)
