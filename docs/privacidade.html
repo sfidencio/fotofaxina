@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Política de Privacidade</title><style>
+:root{--bg:#f7f8fa;--fg:#1f2937;--muted:#5b6472;--card:#fff;--line:#e3e6ea;--accent:#0d9488}
+@media (prefers-color-scheme:dark){:root{--bg:#14181f;--fg:#e8eaed;--muted:#a3abb7;--card:#1c222b;--line:#2c333d;--accent:#2dd4bf}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:32px 16px 64px}
+header{display:flex;gap:16px;align-items:center;margin-bottom:24px}header img{width:72px;height:72px}
+h1{margin:0;font-size:28px}h2{margin-top:32px;font-size:20px}a{color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 24px;margin:16px 0}
+.muted{color:var(--muted)}nav{display:flex;gap:16px;flex-wrap:wrap;margin:8px 0 0}
+footer{margin-top:40px;color:var(--muted);font-size:14px}
+</style></head><body><main>
+<header><img src="mascote.png" alt="Mascote do FotoFaxina"><div><h1>Política de Privacidade</h1>
+<nav><a href="index.html">Início</a><a href="privacidade.html">Privacidade / Privacy</a><a href="termos.html">Termos / Terms</a>
+<a href="https://github.com/sfidencio/fotofaxina">Código-fonte</a></nav></div></header>
+
+<p class="muted">Última atualização: 25 de outubro de 2026</p>
+<div class="card">
+<h2>Resumo</h2>
+<p>O FotoFaxina roda no seu computador. Não existe servidor do FotoFaxina: nenhum dado seu é enviado ao desenvolvedor
+nem a terceiros. A única comunicação de rede é com o <b>Google Fotos</b>, por sua iniciativa, para enviar as fotos
+que você escolheu.</p>
+<h2>Dados acessados</h2>
+<ul>
+<li><b>Arquivos do HD ou pasta que você escolhe:</b> lidos para calcular duplicatas, ler a data e a câmera e classificar
+as imagens. A classificação (IA) acontece no seu computador. Os arquivos nunca são apagados, movidos ou alterados.</li>
+<li><b>Conta Google (Google Fotos):</b> o app pede só duas permissões: <i>adicionar</i> fotos e álbuns à sua biblioteca e
+<i>editar o que o próprio app criou</i>. Ele <b>não consegue ver, baixar nem apagar</b> as fotos que já estão no seu
+Google Fotos.</li>
+</ul>
+<h2>Como os dados do Google são usados</h2>
+<p>Os dados obtidos das APIs do Google são usados apenas para enviar as fotos e criar ou renomear os álbuns que você
+pediu. Eles não são vendidos, compartilhados, usados para publicidade nem para treinar modelos de IA. O uso e a
+transferência de informações recebidas das APIs do Google seguem a
+<a href="https://developers.google.com/terms/api-services-user-data-policy">Política de Dados do Usuário dos Serviços de API do Google</a>,
+incluindo os requisitos de Uso Limitado.</p>
+<h2>Armazenamento</h2>
+<p>Tudo fica no seu computador, na pasta de dados do app (<code>~/.fotofaxina</code>): o histórico do que foi analisado e
+enviado, miniaturas, configurações e o login do Google (protegido pela criptografia do Windows). Nada disso é enviado
+a lugar nenhum.</p>
+<h2>Como apagar seus dados</h2>
+<ul><li>No app: <b>Configurações → Desconectar</b> remove o login; <b>Limpar todo o histórico</b> apaga os registros.</li>
+<li>Apagar a pasta <code>~/.fotofaxina</code> remove tudo o que o app guardou.</li>
+<li>Para revogar o acesso pelo Google: <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</li></ul>
+<h2>Contato</h2>
+<p>Dúvidas: abra uma issue em <a href="https://github.com/sfidencio/fotofaxina/issues">https://github.com/sfidencio/fotofaxina/issues</a>.</p>
+</div>
+<div class="card" lang="en">
+<h2>Privacy Policy (English)</h2>
+<p>FotoFaxina runs entirely on your computer. There is no FotoFaxina server: none of your data is sent to the developer or
+to third parties. The only network communication is with <b>Google Photos</b>, at your request, to upload the photos you
+chose. The app requests only two scopes: add media and albums to your library, and edit content the app itself created.
+It <b>cannot view, download or delete</b> photos already in your Google Photos.</p>
+<p>Data received from Google APIs is used only to upload your photos and create the albums you asked for. It is not sold,
+shared, used for advertising or to train AI models. FotoFaxina's use and transfer of information received from Google
+APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User
+Data Policy</a>, including the Limited Use requirements.</p>
+<p>Everything is stored locally in <code>~/.fotofaxina</code> (history, thumbnails, settings and the Google sign-in, which
+is protected by Windows encryption). To delete it: Settings → Disconnect / Clear all history, or delete that folder.
+Revoke access at <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.
+Contact: <a href="https://github.com/sfidencio/fotofaxina/issues">GitHub issues</a>.</p>
+</div>
+
+<footer>FotoFaxina — código aberto (licença MIT) · <a href="https://github.com/sfidencio/fotofaxina">github.com/sfidencio/fotofaxina</a></footer>
+</main></body></html>
