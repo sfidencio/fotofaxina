@@ -408,6 +408,9 @@ def main():
             falhas += 1
             print(f"FALHA {caso.__name__}: {e!r}")
             traceback.print_exc()
+            if os.environ.get("GITHUB_ACTIONS"):  # aparece no resumo do Actions
+                onde = traceback.extract_tb(e.__traceback__)[-1]
+                print(f"::error title={caso.__name__}::{e!r} em {Path(onde.filename).name}:{onde.lineno}")
     if falhas:
         raise SystemExit(f"{falhas} caso(s) falharam")
     print(f"OK: {len(casos)} casos de robustez.")
