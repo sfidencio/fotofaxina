@@ -267,4 +267,82 @@ EN: dict[str, str] = {
         "The AI is available: reclassifying {n} items that were previously decided without it.",
     "{n} aguardam o HD de origem ser plugado.": "{n} are waiting for their source drive to be plugged in.",
     "Aguarde a tarefa atual terminar.": "Wait for the current task to finish.",
+    'Juntando álbuns':
+        'Merging albums',
+    'O álbum de destino ainda não existe no Google Fotos.':
+        "The target album doesn't exist in Google Photos yet.",
+    '{n} álbuns do Google Fotos adicionados à lista.':
+        '{n} Google Photos albums added to the list.',
+    'Usando o álbum “{titulo}” que já existe no Google Fotos.':
+        'Using the album “{titulo}” that already exists in Google Photos.',
+    '{n} fotos já enviadas foram movidas para o álbum escolhido.':
+        '{n} already uploaded photos were moved to the chosen album.',
+    '“{origem}” → “{destino}”: {n} itens.':
+        '“{origem}” → “{destino}”: {n} items.',
+    'Não consegui colocar {n} fotos no álbum escolhido: {erro}':
+        "Couldn't add {n} photos to the chosen album: {erro}",
+    'As fotos foram para o novo álbum, mas não consegui tirá-las do antigo: {erro}':
+        "The photos went to the new album, but I couldn't remove them from the old one: {erro}",
+    'Não consegui esvaziar “{titulo}”: {erro}':
+        "Couldn't empty “{titulo}”: {erro}",
+    'Para ver os álbuns do Google Fotos, reconecte a conta (Configurações → Conectar conta Google). O FotoFaxina precisa de uma permissão nova, só para ler o que ele mesmo criou.':
+        'To see your Google Photos albums, reconnect the account (Settings → Connect Google account). FotoFaxina needs a new permission, only to read what it created itself.',
+    '{n} álbuns criados pelo FotoFaxina no Google Fotos.':
+        '{n} albums created by FotoFaxina in Google Photos.',
+    'Não consegui buscar a lista de álbuns do Google Fotos: {erro}':
+        "Couldn't fetch the Google Photos album list: {erro}",
+    'O álbum “{titulo}” chegou ao limite de {limite} itens do Google; continuando em “{novo}”.':
+        "The album “{titulo}” reached Google's limit of {limite} items; continuing in “{novo}”.",
+    'Juntar álbuns':
+        'Merge albums',
+    '{n} fotos foram juntadas no álbum de destino.':
+        '{n} photos were merged into the target album.',
+    'Estes álbuns ficaram vazios. Abra cada um e apague-o no Google Fotos (as fotos não são apagadas):':
+        'These albums are now empty. Open each one and delete it in Google Photos (the photos are not deleted):',
+    'Alguns itens não puderam ser movidos (foram colocados à mão no Google Fotos) e ficaram em: {lista}':
+        "Some items couldn't be moved (they were added by hand in Google Photos) and stayed in: {lista}",
+    'Criar álbum':
+        'Create album',
+    'Nome do novo álbum no Google Fotos:':
+        'Name of the new album in Google Photos:',
+    'Álbuns que o FotoFaxina criou no Google Fotos. Álbuns feitos à mão no Google Fotos não aparecem: o Google não permite que outros apps os usem.':
+        "Albums FotoFaxina created in Google Photos. Albums made by hand in Google Photos don't show up: Google doesn't let other apps use them.",
+    'Criar álbum novo…':
+        'Create new album…',
+    'Atualizar lista do Google':
+        'Refresh list from Google',
+    'Para o álbum…':
+        'To album…',
+    'Escolher (ou criar) o álbum do Google Fotos para as fotos selecionadas. As já enviadas são movidas para ele no próximo envio.':
+        'Choose (or create) the Google Photos album for the selected photos. Already uploaded ones are moved to it on the next upload.',
+    'Enviar para o álbum':
+        'Send to album',
+    'Buscar álbuns no Google Fotos':
+        'Fetch albums from Google Photos',
+    'Traz os álbuns que o FotoFaxina já criou no Google Fotos (inclusive depois de limpar o histórico).':
+        'Brings in the albums FotoFaxina already created in Google Photos (even after clearing the history).',
+    'Criar álbum…':
+        'Create album…',
+    'Juntar álbuns…':
+        'Merge albums…',
+    'Selecione dois ou mais álbuns já enviados (Ctrl+clique) para juntar as fotos num só.':
+        'Select two or more uploaded albums (Ctrl+click) to merge their photos into one.',
+    'Juntar as fotos em qual álbum? Os outros ficam vazios.':
+        'Merge the photos into which album? The others will be left empty.',
+    'Os álbuns que ficarem vazios precisam ser apagados à mão no Google Fotos (o Google não deixa apps apagarem álbuns). Apagar um álbum não apaga as fotos.':
+        "Albums left empty must be deleted by hand in Google Photos (Google doesn't let apps delete albums). Deleting an album doesn't delete the photos.",
+    'Usar o álbum do Google Fotos com o mesmo nome, em vez de criar outro':
+        'Use the Google Photos album with the same name instead of creating another',
+    'Vale para álbuns que o próprio FotoFaxina criou (ex.: a “parte 2” de 2023 entra no “Fotos 2023” que já existe).':
+        'Applies to albums FotoFaxina itself created (e.g. “part 2” of 2023 goes into the existing “Photos 2023”).',
+    'Escolher álbum':
+        'Choose album',
+    '{n} foto(s) vão para “{album}” no próximo envio.':
+        '{n} photo(s) will go to “{album}” on the next upload.',
+    '{n} já enviada(s) serão movidas para lá no próximo envio.':
+        '{n} already uploaded will be moved there on the next upload.',
+    'Mover as fotos de {n} álbum(ns) para “{destino}”?':
+        'Move the photos of {n} album(s) into “{destino}”?',
+    'Sim ({n} itens)':
+        'Yes ({n} items)',
 }

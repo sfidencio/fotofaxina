@@ -3,12 +3,17 @@ from __future__ import annotations
 
 import os
 
-from . import classifier, db, grouper, scanner
+from . import albums, classifier, db, grouper, scanner
 from .config import Config, wants_upload
-from .google_photos import BATCH_LIMIT, GooglePhotos, GooglePhotosError, NotConnected, QuotaExceeded
+from .google_photos import (BATCH_LIMIT, GooglePhotos, GooglePhotosError, NeedsReconnect, NotConnected,
+                            QuotaExceeded)
 from .i18n import _
 
 # mensagem que versões antigas gravavam para arquivo de HD desconectado (português e inglês)
+# limite do Google: um álbum aceita até 20.000 itens. Ao encher, o envio continua num álbum novo
+# com o mesmo nome e um número: "Fotos 2023 (2)", "Fotos 2023 (3)"...
+ALBUM_LIMIT = 20000
+
 MISSING_ERRORS = ("Arquivo indisponível (HD desconectado?)", "File unavailable (drive disconnected?)")
 
 
@@ -87,6 +92,20 @@ def enviar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
             log(_("Não consegui renomear “{titulo}”: {erro}").format(titulo=a["title"], erro=e))
     conn.commit()
 
+    # álbuns que o FotoFaxina já criou no Google: reaproveita o de mesmo nome (ex.: depois de limpar o
+    # histórico) e move fotos já enviadas que o usuário mandou para outro álbum
+    try:
+        albums.refresh(conn, gp, log)
+        if cfg.reuse_same_name:
+            albums.link_same_name(conn, log)
+    except NeedsReconnect as e:
+        log(str(e))
+    except NotConnected:
+        raise
+    except Exception as e:  # a lista é um extra: sem ela, o envio segue normalmente
+        log(_("Não consegui buscar a lista de álbuns do Google Fotos: {erro}").format(erro=e))
+    albums.move_pinned_uploaded(conn, gp, log)
+
     # versões antigas marcavam como erro o que estava num HD desconectado: volta para a fila
     conn.execute("UPDATE photos SET status='classified', error=NULL WHERE status='error' "
                  "AND media_item_id IS NULL AND error IN (?, ?)", MISSING_ERRORS)
@@ -108,12 +127,16 @@ def enviar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
     by_album: dict[str, list] = {}
     for r in rows:
         by_album.setdefault(r["album_key"], []).append(r)
+    segments = []
+    for key, items in by_album.items():
+        segments.extend(_segments(conn, key, items, log))
+    conn.commit()
 
     def fail(ids, msg):
         conn.executemany("UPDATE photos SET status='error', error=? WHERE id=?", [(msg[:500], i) for i in ids])
 
     try:
-        for key, items in by_album.items():
+        for key, items in segments:
             if stop is not None and stop.is_set() or quota:
                 break
             album = conn.execute("SELECT * FROM albums WHERE key=?", (key,)).fetchone()
@@ -196,8 +219,9 @@ def enviar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
                             "UPDATE photos SET status='uploaded', media_item_id=?, error=NULL WHERE id=?",
                             (val, photo_id),
                         )
-                        sha = conn.execute("SELECT sha256 FROM photos WHERE id=?", (photo_id,)).fetchone()[0]
-                        uploaded_hashes.add(sha)
+                        got = conn.execute("SELECT sha256 FROM photos WHERE id=?", (photo_id,)).fetchone()
+                        if got is not None:  # o histórico pode ter sido limpo durante o envio
+                            uploaded_hashes.add(got[0])
                         enviados += 1
                     else:
                         fail([photo_id], val)
@@ -222,6 +246,77 @@ def enviar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
     res["ausentes_agora"] = ausentes
     res["albuns_novos"] = novos_albuns
     return res
+
+
+def _album_count(conn, key: str, row) -> int:
+    local = conn.execute("SELECT COUNT(*) FROM photos WHERE album_key=? AND media_item_id IS NOT NULL",
+                         (key,)).fetchone()[0]
+    return max(local, (row["google_items"] or 0) if row is not None else 0)
+
+
+def _segments(conn, key: str, items: list, log=_noop) -> list[tuple[str, list]]:
+    """Divide os itens de um álbum para não passar do limite do Google: o que não cabe vai para
+    "Título (2)", "Título (3)"... (criados no Google quando a primeira foto for enviada)."""
+    base = conn.execute("SELECT * FROM albums WHERE key=?", (key,)).fetchone()
+    if base is None:
+        return [(key, items)]
+    out, rest, n = [], list(items), 1
+    while rest:
+        k = key if n == 1 else f"{key}#{n}"
+        row = base if n == 1 else conn.execute("SELECT * FROM albums WHERE key=?", (k,)).fetchone()
+        if row is None:
+            title = f"{base['title']} ({n})"
+            conn.execute("INSERT INTO albums(key, title, start, end, custom_title) VALUES(?, ?, ?, ?, 1)",
+                         (k, title, base["start"], base["end"]))
+            log(_("O álbum “{titulo}” chegou ao limite de {limite} itens do Google; continuando em “{novo}”.")
+                .format(titulo=base["title"], limite=f"{ALBUM_LIMIT:,}".replace(",", "."), novo=title))
+            room = ALBUM_LIMIT
+        else:
+            room = ALBUM_LIMIT - _album_count(conn, k, row)
+        if room > 0:
+            take, rest = rest[:room], rest[room:]
+            if k != key:
+                conn.executemany("UPDATE photos SET album_key=? WHERE id=?", [(k, r["id"]) for r in take])
+            out.append((k, take))
+        n += 1
+    return out
+
+
+def _gp() -> GooglePhotos:
+    gp = GooglePhotos()
+    gp.connect(interactive=False)
+    return gp
+
+
+def buscar_albuns(progress=_noop, log=_noop, stop=None) -> int:
+    """Traz a lista de álbuns que o FotoFaxina criou no Google Fotos."""
+    gp = _gp()
+    conn = db.connect()
+    try:
+        n = albums.refresh(conn, gp, log)
+    finally:
+        conn.close()
+    log(_("{n} álbuns criados pelo FotoFaxina no Google Fotos.").format(n=n))
+    return n
+
+
+def criar_album(title: str) -> str:
+    """Cria um álbum novo no Google Fotos e o coloca na lista. Retorna a chave local."""
+    gp = _gp()
+    conn = db.connect()
+    try:
+        return albums.create(conn, gp, title.strip()[:500])
+    finally:
+        conn.close()
+
+
+def juntar_albuns(target_key: str, source_keys: list[str], progress=_noop, log=_noop, stop=None) -> dict:
+    gp = _gp()
+    conn = db.connect()
+    try:
+        return albums.merge(conn, gp, target_key, source_keys, progress, log, stop)
+    finally:
+        conn.close()
 
 
 def tentar_erros_novamente() -> int:

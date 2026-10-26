@@ -57,6 +57,7 @@ class Config:
     year_album_title: str = ""             # nome do álbum no modo "ano" ("" = padrão do idioma)
     event_gap_hours: float = 24.0          # intervalo sem fotos que separa dois eventos
     min_event_size: int = 8                # eventos menores vão para o álbum do mês
+    reuse_same_name: bool = True           # usa álbum do Google (criado pelo app) com o mesmo nome
     auto_scan_on_drive: bool = True        # analisa sozinho quando um HD é plugado
     auto_upload: bool = False              # envia sozinho após a análise (sem revisão)
     welcome_done: bool = False             # já mostrou a tela de boas-vindas

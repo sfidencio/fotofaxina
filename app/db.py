@@ -31,7 +31,8 @@ CREATE TABLE IF NOT EXISTS photos(
     status        TEXT DEFAULT 'scanned',   -- scanned | classified | uploaded | error
     media_item_id TEXT,
     error         TEXT,
-    not_duplicate INTEGER DEFAULT 0  -- usuário disse "Não é duplicata": não comparar por semelhança
+    not_duplicate INTEGER DEFAULT 0, -- usuário disse "Não é duplicata": não comparar por semelhança
+    album_pin     TEXT               -- álbum escolhido pelo usuário (vale mais que o agrupamento)
 );
 CREATE INDEX IF NOT EXISTS idx_photos_sha    ON photos(sha256);
 CREATE INDEX IF NOT EXISTS idx_photos_phash  ON photos(phash);
@@ -47,12 +48,16 @@ CREATE TABLE IF NOT EXISTS albums(
     google_id      TEXT,
     custom_title   INTEGER DEFAULT 0,
     pending_rename INTEGER DEFAULT 0,
-    product_url    TEXT
+    product_url    TEXT,
+    google_items   INTEGER           -- quantos itens o álbum tem no Google (última busca)
 );
+
+-- álbuns esvaziados ao juntar: a busca no Google não os traz de volta para a lista
+CREATE TABLE IF NOT EXISTS ignored_albums(google_id TEXT PRIMARY KEY);
 """
 
 
-SCHEMA_VERSION = 2  # suba ao mudar o esquema; a migração roda uma vez por banco
+SCHEMA_VERSION = 4  # suba ao mudar o esquema; a migração roda uma vez por banco
 _ready: set[str] = set()
 
 
@@ -82,7 +87,12 @@ def _migrate(conn: sqlite3.Connection) -> None:
     pcols = {r["name"] for r in conn.execute("PRAGMA table_info(photos)")}
     if "not_duplicate" not in pcols:
         conn.execute("ALTER TABLE photos ADD COLUMN not_duplicate INTEGER DEFAULT 0")
-        conn.commit()
+    if "album_pin" not in pcols:
+        conn.execute("ALTER TABLE photos ADD COLUMN album_pin TEXT")
+    acols = {r["name"] for r in conn.execute("PRAGMA table_info(albums)")}
+    if "google_items" not in acols:
+        conn.execute("ALTER TABLE albums ADD COLUMN google_items INTEGER")
+    conn.commit()
     _merge_path_variants(conn)
 
 

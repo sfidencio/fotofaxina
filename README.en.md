@@ -112,6 +112,24 @@ Google requires every program to have its own credential. Summary:
 - There is a **daily request limit**. If it is reached the app stops and tells you; the next day,
   click Upload and it continues where it left off.
 
+## Albums in Google Photos
+
+- **Same name, same album:** before creating an album, FotoFaxina looks in Google Photos for an album
+  **it created** with the same name and uses it (e.g. “part 2” of 2023 goes into the existing
+  “Photos 2023”, even after clearing the history). Can be turned off in Settings → Albums.
+- **Choose the album:** in Review, select photos → **To album…** → pick an album from the list or
+  **Create new album…** (created right away in Google Photos). Already uploaded photos are moved to
+  the chosen album on the next upload.
+- **Albums tab:** **Fetch albums from Google Photos**, **Create album…** and **Merge albums…**
+  (select two or more with Ctrl+click; the photos go into one and the others are left empty — Google
+  doesn't let apps delete albums, so delete the empty ones in Google Photos; photos are not deleted).
+- **Full album:** Google allows up to 20,000 items per album; when full, uploading continues on its
+  own in “Photos 2023 (2)”.
+- **Google limit:** only albums created by FotoFaxina are visible and can receive photos. Albums made
+  by hand in Google Photos are not accessible to other apps.
+- If you used an earlier version, click **Connect Google account** once to enable the album list
+  (uploading keeps working without it).
+
 ## Sharing albums and making sure your family has access
 
 Since 2025-03-31 the Google API no longer lets programs share albums. So FotoFaxina takes the

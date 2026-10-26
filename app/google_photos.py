@@ -16,6 +16,8 @@ from .i18n import _
 SCOPES = [
     "https://www.googleapis.com/auth/photoslibrary.appendonly",
     "https://www.googleapis.com/auth/photoslibrary.edit.appcreateddata",
+    # ler só o que o próprio FotoFaxina criou (lista de álbuns, itens para juntar álbuns)
+    "https://www.googleapis.com/auth/photoslibrary.readonly.appcreateddata",
 ]
 API = "https://photoslibrary.googleapis.com/v1"
 BATCH_LIMIT = 50
@@ -31,6 +33,10 @@ class NotConnected(GooglePhotosError):
 
 class QuotaExceeded(GooglePhotosError):
     pass
+
+
+class NeedsReconnect(NotConnected):
+    """O login é de uma versão anterior, sem a permissão de ler os álbuns criados pelo app."""
 
 
 def bundled_secret_path():
@@ -64,6 +70,11 @@ def EXPIRED_MSG() -> str:  # função: o idioma é escolhido depois do import
              "acontece a cada 7 dias). Clique em “Conectar conta Google” na aba Configurações.")
 
 
+def RECONNECT_MSG() -> str:
+    return _("Para ver os álbuns do Google Fotos, reconecte a conta (Configurações → Conectar conta "
+             "Google). O FotoFaxina precisa de uma permissão nova, só para ler o que ele mesmo criou.")
+
+
 def load_credentials():
     """Lê o login salvo (protegido pela criptografia do Windows quando disponível)."""
     import json
@@ -75,7 +86,9 @@ def load_credentials():
     data = TOKEN_PATH.read_bytes()
     try:
         info = json.loads(secure_store.unprotect(data).decode("utf-8"))
-        creds = Credentials.from_authorized_user_info(info, SCOPES)
+        # usa as permissões que o login JÁ TEM: pedir uma permissão nova ao renovar o login faria o
+        # Google recusar (e o envio pararia). A nova só vem ao clicar em "Conectar conta Google".
+        creds = Credentials.from_authorized_user_info(info, info.get("scopes") or SCOPES)
     except Exception:
         return None  # arquivo corrompido ou de outro usuário do Windows: pede login de novo
     if secure_store.needs_upgrade(data):
@@ -187,6 +200,55 @@ class GooglePhotos:
             "PATCH", f"{API}/albums/{album_id}", params={"updateMask": "title"},
             json={"title": title[:500]},
         )
+
+    # ---------- álbuns criados pelo app (só esses aparecem para a API desde 2025) ----------
+    def _read(self, method: str, url: str, **kw):
+        try:
+            return self._request(method, url, **kw)
+        except NotConnected:
+            raise
+        except GooglePhotosError as e:
+            if str(e).startswith("403"):
+                raise NeedsReconnect(RECONNECT_MSG()) from e
+            raise
+
+    def list_albums(self) -> list[dict]:
+        """Álbuns criados pelo FotoFaxina: [{id, title, productUrl, mediaItemsCount}]."""
+        out, token = [], None
+        while True:
+            params = {"pageSize": 50, "excludeNonAppCreatedData": "true"}
+            if token:
+                params["pageToken"] = token
+            data = self._read("GET", f"{API}/albums", params=params).json()
+            for a in data.get("albums", []):
+                out.append({"id": a["id"], "title": a.get("title", ""), "productUrl": a.get("productUrl"),
+                            "mediaItemsCount": int(a.get("mediaItemsCount", 0) or 0)})
+            token = data.get("nextPageToken")
+            if not token:
+                return out
+
+    def album_items(self, album_id: str) -> list[str]:
+        """IDs das fotos/vídeos de um álbum (só os enviados pelo app)."""
+        out, token = [], None
+        while True:
+            body = {"albumId": album_id, "pageSize": 100}
+            if token:
+                body["pageToken"] = token
+            data = self._read("POST", f"{API}/mediaItems:search", json=body).json()
+            out.extend(m["id"] for m in data.get("mediaItems", []))
+            token = data.get("nextPageToken")
+            if not token:
+                return out
+
+    def add_to_album(self, album_id: str, media_ids: list[str]) -> None:
+        for i in range(0, len(media_ids), BATCH_LIMIT):
+            self._request("POST", f"{API}/albums/{album_id}:batchAddMediaItems",
+                          json={"mediaItemIds": media_ids[i:i + BATCH_LIMIT]})
+
+    def remove_from_album(self, album_id: str, media_ids: list[str]) -> None:
+        for i in range(0, len(media_ids), BATCH_LIMIT):
+            self._request("POST", f"{API}/albums/{album_id}:batchRemoveMediaItems",
+                          json={"mediaItemIds": media_ids[i:i + BATCH_LIMIT]})
 
     def batch_create(self, album_id: str | None, items: list[tuple[str, str]]) -> dict[str, tuple[bool, str]]:
         """items: (upload_token, nome_arquivo). Retorna {token: (ok, media_id_ou_erro)}."""

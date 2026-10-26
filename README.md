@@ -113,6 +113,26 @@ erros mais comuns: [docs/CONFIGURAR-GOOGLE.md](docs/CONFIGURAR-GOOGLE.md)**
 - Existe um **limite diário de requisições**. Se for atingido, o app avisa e para; no dia
   seguinte, clique em Enviar e ele continua de onde parou.
 
+## Álbuns no Google Fotos
+
+- **Mesmo nome, mesmo álbum:** antes de criar um álbum, o FotoFaxina procura no Google Fotos um
+  álbum **criado por ele** com o mesmo nome e usa esse (ex.: a “parte 2” de 2023 entra no
+  “Fotos 2023” que já existe, mesmo depois de limpar o histórico). Dá para desligar em
+  Configurações → Álbuns.
+- **Escolher o álbum:** na Revisão, selecione fotos → **Para o álbum…** → escolha um álbum da lista
+  ou **Criar álbum novo…** (criado na hora no Google Fotos). Fotos já enviadas são movidas para o
+  álbum escolhido no próximo envio.
+- **Aba Álbuns:** **Buscar álbuns no Google Fotos**, **Criar álbum…** e **Juntar álbuns…**
+  (selecione dois ou mais com Ctrl+clique; as fotos vão para um só e os outros ficam vazios — o
+  Google não deixa apps apagarem álbuns, então apague os vazios no Google Fotos; as fotos não são
+  apagadas).
+- **Álbum cheio:** o Google aceita até 20.000 itens por álbum; ao encher, o envio continua sozinho
+  em “Fotos 2023 (2)”.
+- **Limite do Google:** só os álbuns criados pelo FotoFaxina aparecem e podem receber fotos.
+  Álbuns feitos à mão no Google Fotos não são acessíveis a outros apps.
+- Quem já usava uma versão anterior precisa clicar uma vez em **Conectar conta Google** para liberar
+  a lista de álbuns (o envio continua funcionando mesmo sem isso).
+
 ## Compartilhar álbuns e garantir acesso da família
 
 Desde 31/03/2025 a API do Google não permite mais compartilhar álbuns por programa. Por isso o

@@ -7,12 +7,13 @@ from datetime import datetime
 from PySide6.QtCore import QSize, Qt, QThreadPool, QUrl, Signal
 from PySide6.QtGui import QDesktopServices, QIcon, QPixmap
 from PySide6.QtWidgets import (
-    QAbstractItemView, QCheckBox, QComboBox, QDoubleSpinBox, QFileDialog, QFormLayout, QGroupBox,
-    QHBoxLayout, QHeaderView, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMessageBox, QPlainTextEdit,
-    QProgressBar, QPushButton, QSpinBox, QStyle, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
+    QAbstractItemView, QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox,
+    QFileDialog, QFormLayout, QGroupBox, QHBoxLayout, QHeaderView, QInputDialog, QLabel, QLineEdit,
+    QListWidget, QListWidgetItem, QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QSpinBox, QStyle,
+    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
-from .. import autostart, classifier, db, google_photos
+from .. import albums, autostart, classifier, db, google_photos, pipeline
 from ..config import CATEGORIES, SOURCES, TOKEN_PATH, Config, resource, wants_upload
 from ..i18n import LANGUAGES, _, language
 from .icons import set_icon
@@ -24,6 +25,102 @@ REPO = "https://github.com/sfidencio/fotofaxina/blob/master/"
 
 def cat_label(key: str | None) -> str:
     return _(CATEGORIES[key]) if key in CATEGORIES else "—"
+
+
+def google_call(parent, fn, *args):
+    """Chamada rápida ao Google Fotos (buscar lista, criar álbum) com cursor de espera e erro amigável.
+    Retorna (ok, resultado)."""
+    if not TOKEN_PATH.exists():
+        QMessageBox.information(parent, _("Google Fotos"), _("Conecte sua conta Google na aba Configurações primeiro."))
+        return False, None
+    QApplication.setOverrideCursor(Qt.WaitCursor)
+    try:
+        return True, fn(*args)
+    except Exception as e:
+        QApplication.restoreOverrideCursor()
+        QMessageBox.warning(parent, _("Google Fotos"), str(e))
+        return False, None
+    finally:
+        if QApplication.overrideCursor() is not None:
+            QApplication.restoreOverrideCursor()
+
+
+def ask_album_name(parent) -> str | None:
+    name, ok = QInputDialog.getText(parent, _("Criar álbum"), _("Nome do novo álbum no Google Fotos:"))
+    return name.strip() if ok and name.strip() else None
+
+
+class AlbumPicker(QDialog):
+    """Escolher um álbum do Google Fotos (criado pelo FotoFaxina) ou criar um novo."""
+
+    def __init__(self, parent=None, title: str | None = None, exclude: set | None = None):
+        super().__init__(parent)
+        self.setWindowTitle(title or _("Escolher álbum"))
+        self.resize(480, 420)
+        self.exclude = exclude or set()
+        self.list = QListWidget()
+        self.list.itemDoubleClicked.connect(lambda _it: self.accept())
+        hint = QLabel(_("Álbuns que o FotoFaxina criou no Google Fotos. Álbuns feitos à mão no Google Fotos "
+                        "não aparecem: o Google não permite que outros apps os usem."))
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: gray")
+        b_new = QPushButton(_("Criar álbum novo…"))
+        b_ref = QPushButton(_("Atualizar lista do Google"))
+        set_icon(b_new, "plus", "accent")
+        set_icon(b_ref, "sync")
+        b_new.clicked.connect(self._create)
+        b_ref.clicked.connect(self._refresh)
+        box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        box.accepted.connect(self.accept)
+        box.rejected.connect(self.reject)
+        row = QHBoxLayout()
+        row.addWidget(b_new)
+        row.addWidget(b_ref)
+        row.addStretch()
+        lay = QVBoxLayout(self)
+        lay.addWidget(hint)
+        lay.addWidget(self.list, 1)
+        lay.addLayout(row)
+        lay.addWidget(box)
+        self._load()
+        if self.list.count() == 0 and TOKEN_PATH.exists():
+            self._refresh(quiet=True)
+
+    def _load(self, select: str | None = None):
+        conn = db.connect()
+        rows = albums.google_albums(conn)
+        conn.close()
+        self.list.clear()
+        for r in rows:
+            if r["key"] in self.exclude:
+                continue
+            n = r["google_items"] if r["google_items"] is not None else r["local"]
+            it = QListWidgetItem(f"{r['title']}   ({n})")
+            it.setData(Qt.UserRole, r["key"])
+            self.list.addItem(it)
+            if r["key"] == select:
+                self.list.setCurrentItem(it)
+        if self.list.currentItem() is None and self.list.count():
+            self.list.setCurrentRow(0)
+
+    def _refresh(self, quiet=False):
+        if quiet and not TOKEN_PATH.exists():
+            return
+        ok, _n = google_call(self, pipeline.buscar_albuns)
+        if ok:
+            self._load()
+
+    def _create(self):
+        name = ask_album_name(self)
+        if not name:
+            return
+        ok, key = google_call(self, pipeline.criar_album, name)
+        if ok:
+            self._load(select=key)
+
+    def selected_key(self) -> str | None:
+        it = self.list.currentItem()
+        return it.data(Qt.UserRole) if it else None
 
 
 def guide_url() -> str:
@@ -195,6 +292,11 @@ class RevisaoTab(QWidget):
         btn_notdup.setToolTip(_("Para fotos parecidas, mas diferentes (sequência, rajada): passam a ser "
                                 "enviadas e não são mais tratadas como cópia."))
         btn_notdup.clicked.connect(self._not_duplicate)
+        btn_album = QPushButton(_("Para o álbum…"))
+        btn_album.setToolTip(_("Escolher (ou criar) o álbum do Google Fotos para as fotos selecionadas. "
+                               "As já enviadas são movidas para ele no próximo envio."))
+        btn_album.clicked.connect(self._send_to_album)
+        set_icon(btn_album, "album", "accent")
         btn_forget = QPushButton(_("Esquecer selecionadas…"))
         btn_forget.setToolTip(_("Remove os itens do histórico do FotoFaxina (não apaga nenhum arquivo)."))
         btn_forget.clicked.connect(self._forget_selected)
@@ -209,7 +311,7 @@ class RevisaoTab(QWidget):
             set_icon(b, name, tone)
 
         bottom = QHBoxLayout()
-        for w in (btn_send, btn_skip, btn_auto, QLabel(" | "), self.move_combo, btn_move,
+        for w in (btn_send, btn_album, btn_skip, btn_auto, QLabel(" | "), self.move_combo, btn_move,
                   QLabel(" | "), btn_notdup):
             bottom.addWidget(w)
         bottom.addStretch()
@@ -346,7 +448,28 @@ class RevisaoTab(QWidget):
         conn.executemany("UPDATE photos SET decision=? WHERE id=? AND media_item_id IS NULL",
                          [(decision, i) for i in ids])
         conn.commit()
+        if decision is None:  # "Voltar ao automático" também desfaz o álbum escolhido
+            albums.unpin(conn, ids)
         conn.close()
+        self.reload()
+        self.changed.emit()
+
+    def _send_to_album(self):
+        ids = self._selected_ids()
+        if not ids:
+            return
+        dlg = AlbumPicker(self, _("Enviar para o álbum"))
+        if dlg.exec() != QDialog.Accepted or not dlg.selected_key():
+            return
+        key = dlg.selected_key()
+        conn = db.connect()
+        a_enviar, a_mover = albums.pin(conn, ids, key)
+        title = conn.execute("SELECT title FROM albums WHERE key=?", (key,)).fetchone()[0]
+        conn.close()
+        msg = _("{n} foto(s) vão para “{album}” no próximo envio.").format(n=a_enviar, album=title)
+        if a_mover:
+            msg += "\n" + _("{n} já enviada(s) serão movidas para lá no próximo envio.").format(n=a_mover)
+        QMessageBox.information(self, _("Enviar para o álbum"), msg)
         self.reload()
         self.changed.emit()
 
@@ -406,6 +529,7 @@ class RevisaoTab(QWidget):
 # ------------------------------------------------------------------ Álbuns
 class AlbunsTab(QWidget):
     regroup = Signal()
+    merge = Signal(str, list)  # destino, álbuns a juntar (roda como tarefa na janela principal)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -418,18 +542,33 @@ class AlbunsTab(QWidget):
             self.table.horizontalHeader().setSectionResizeMode(c, QHeaderView.ResizeToContents)
         self.table.verticalHeader().setVisible(False)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.table.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.table.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.table.itemChanged.connect(self._renamed)
         self.table.itemSelectionChanged.connect(self._selection_changed)
         self.urls: dict[str, str | None] = {}
+        self.gids: dict[str, str | None] = {}
 
         self.btn_share = QPushButton(_("Abrir no Google Fotos para compartilhar"))
         self.btn_share.setEnabled(False)
         self.btn_share.clicked.connect(self._open_album)
         btn = QPushButton(_("Reagrupar (após mudar configurações)"))
         btn.clicked.connect(lambda: self.regroup.emit())
+        self.btn_fetch = QPushButton(_("Buscar álbuns no Google Fotos"))
+        self.btn_fetch.setToolTip(_("Traz os álbuns que o FotoFaxina já criou no Google Fotos (inclusive "
+                                    "depois de limpar o histórico)."))
+        self.btn_fetch.clicked.connect(self._fetch)
+        self.btn_new = QPushButton(_("Criar álbum…"))
+        self.btn_new.clicked.connect(self._create)
+        self.btn_merge = QPushButton(_("Juntar álbuns…"))
+        self.btn_merge.setToolTip(_("Selecione dois ou mais álbuns já enviados (Ctrl+clique) para juntar "
+                                    "as fotos num só."))
+        self.btn_merge.setEnabled(False)
+        self.btn_merge.clicked.connect(self._merge)
         set_icon(self.btn_share, "share", "accent")
         set_icon(btn, "regroup")
+        set_icon(self.btn_fetch, "sync")
+        set_icon(self.btn_new, "plus", "accent")
+        set_icon(self.btn_merge, "merge")
         share_hint = QLabel(_(
             "Para compartilhar: selecione um álbum já enviado → “Abrir no Google Fotos para "
             "compartilhar” → no navegador, clique em <b>Compartilhar</b> e digite os e-mails. "
@@ -442,6 +581,11 @@ class AlbunsTab(QWidget):
         hint.setStyleSheet("color: gray")
         lay = QVBoxLayout(self)
         lay.addWidget(hint)
+        top = QHBoxLayout()
+        for w in (self.btn_fetch, self.btn_new, self.btn_merge):
+            top.addWidget(w)
+        top.addStretch()
+        lay.addLayout(top)
         lay.addWidget(self.table, 1)
         lay.addWidget(share_hint)
         row = QHBoxLayout()
@@ -449,32 +593,81 @@ class AlbunsTab(QWidget):
         row.addStretch()
         row.addWidget(btn)
         lay.addLayout(row)
+        self._busy = False
+
+    def set_busy(self, busy: bool):
+        self._busy = busy
+        self._selection_changed()
+
+    def _selected_keys(self) -> list[str]:
+        rows = sorted({i.row() for i in self.table.selectedIndexes()})
+        return [self.table.item(r, 0).data(Qt.UserRole) for r in rows]
 
     def _selected_key(self) -> str | None:
-        items = self.table.selectedItems()
-        if not items:
-            return None
-        return self.table.item(items[0].row(), 0).data(Qt.UserRole)
+        keys = self._selected_keys()
+        return keys[0] if keys else None
 
     def _selection_changed(self):
         key = self._selected_key()
         url = self.urls.get(key) if key else None
         self.btn_share.setEnabled(bool(url))
         self.btn_share.setToolTip("" if url else _("Este álbum ainda não foi enviado ao Google Fotos."))
+        on_google = [k for k in self._selected_keys() if self.gids.get(k)]
+        self.btn_merge.setEnabled(len(on_google) >= 2 and not self._busy)
 
     def _open_album(self):
         url = self.urls.get(self._selected_key() or "")
         if url:
             QDesktopServices.openUrl(QUrl(url))
 
+    def _fetch(self):
+        ok, n = google_call(self, pipeline.buscar_albuns)
+        if ok:
+            self.reload()
+            QMessageBox.information(self, _("Google Fotos"),
+                                    _("{n} álbuns criados pelo FotoFaxina no Google Fotos.").format(n=n))
+
+    def _create(self):
+        name = ask_album_name(self)
+        if not name:
+            return
+        ok, _key = google_call(self, pipeline.criar_album, name)
+        if ok:
+            self.reload()
+
+    def _merge(self):
+        keys = [k for k in self._selected_keys() if self.gids.get(k)]
+        if len(keys) < 2:
+            return
+        titles = {k: self.table.item(r, 0).text() for r in range(self.table.rowCount())
+                  for k in [self.table.item(r, 0).data(Qt.UserRole)] if k in keys}
+        labels = [titles[k] for k in keys]
+        choice, ok = QInputDialog.getItem(self, _("Juntar álbuns"),
+                                          _("Juntar as fotos em qual álbum? Os outros ficam vazios."),
+                                          labels, 0, False)
+        if not ok:
+            return
+        target = keys[labels.index(choice)]
+        others = [k for k in keys if k != target]
+        text = _("Mover as fotos de {n} álbum(ns) para “{destino}”?").format(n=len(others), destino=choice) + "\n\n" + _(
+            "Os álbuns que ficarem vazios precisam ser apagados à mão no Google Fotos (o Google não deixa "
+            "apps apagarem álbuns). Apagar um álbum não apaga as fotos.")
+        if QMessageBox.question(self, _("Juntar álbuns"), text) == QMessageBox.Yes:
+            self.merge.emit(target, others)
+
     def reload(self):
         conn = db.connect()
         rows = conn.execute(
             "SELECT a.*, COUNT(p.id) AS n, SUM(CASE WHEN p.media_item_id IS NOT NULL THEN 1 ELSE 0 END) AS up "
-            "FROM albums a LEFT JOIN photos p ON p.album_key=a.key GROUP BY a.key ORDER BY a.start DESC"
+            "FROM albums a LEFT JOIN photos p ON p.album_key=a.key GROUP BY a.key "
+            "ORDER BY COALESCE(a.start, '0000') DESC, a.title"
         ).fetchall()
         conn.close()
+        # um álbum do Google aparece uma vez só (a linha do agrupamento tem preferência)
+        grouped = {r["google_id"] for r in rows if r["google_id"] and not r["key"].startswith("g-")}
+        rows = [r for r in rows if not (r["key"].startswith("g-") and r["google_id"] in grouped)]
         self.urls = {r["key"]: db.album_url(r) for r in rows}
+        self.gids = {r["key"]: r["google_id"] for r in rows}
         self.table.blockSignals(True)
         self.table.setRowCount(len(rows))
         for i, r in enumerate(rows):
@@ -482,9 +675,13 @@ class AlbunsTab(QWidget):
             t.setData(Qt.UserRole, r["key"])
             self.table.setItem(i, 0, t)
             s, e = (r["start"] or "")[:10], (r["end"] or "")[:10]
-            period = s if s == e else f"{s} → {e}"
-            for c, val in ((1, period), (2, f"{r['up'] or 0}/{r['n']}"),
-                           (3, _("Sim") if r["google_id"] else _("Ainda não"))):
+            period = s if s == e else (f"{s} → {e}" if s else "—")
+            if r["google_id"]:
+                on_google = (_("Sim ({n} itens)").format(n=r["google_items"]) if r["google_items"] is not None
+                             else _("Sim"))
+            else:
+                on_google = _("Ainda não")
+            for c, val in ((1, period), (2, f"{r['up'] or 0}/{r['n']}"), (3, on_google)):
                 item = QTableWidgetItem(val)
                 item.setFlags(item.flags() & ~Qt.ItemIsEditable)
                 self.table.setItem(i, c, item)
@@ -568,6 +765,10 @@ class ConfigTab(QWidget):
         fl.addRow(_("Nome do álbum anual:"), self.year_title)
         fl.addRow(_("Novo evento após um intervalo de:"), self.gap_spin)
         fl.addRow(_("Tamanho mínimo de um evento:"), self.min_spin)
+        self.reuse_check = QCheckBox(_("Usar o álbum do Google Fotos com o mesmo nome, em vez de criar outro"))
+        self.reuse_check.setToolTip(_("Vale para álbuns que o próprio FotoFaxina criou (ex.: a “parte 2” de "
+                                      "2023 entra no “Fotos 2023” que já existe)."))
+        fl.addRow(self.reuse_check)
 
         auto = QGroupBox(_("Automação e idioma"))
         al = QFormLayout(auto)
@@ -656,6 +857,7 @@ class ConfigTab(QWidget):
         self._mode_changed()
         self.gap_spin.setValue(c.event_gap_hours)
         self.min_spin.setValue(c.min_event_size)
+        self.reuse_check.setChecked(c.reuse_same_name)
         self.scan_check.setChecked(c.auto_scan_on_drive)
         self.upload_check.setChecked(c.auto_upload)
         self.startup_check.setChecked(autostart.is_enabled())
@@ -734,6 +936,7 @@ class ConfigTab(QWidget):
         c.year_album_title = title
         c.event_gap_hours = self.gap_spin.value()
         c.min_event_size = self.min_spin.value()
+        c.reuse_same_name = self.reuse_check.isChecked()
         c.auto_scan_on_drive = self.scan_check.isChecked()
         c.auto_upload = self.upload_check.isChecked()
         c.language = self.lang_combo.currentData()

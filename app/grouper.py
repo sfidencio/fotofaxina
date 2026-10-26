@@ -151,12 +151,16 @@ def group(cfg, log=None) -> int:
     ).fetchall()
     items = []
     clear = []
+    pinned = []
     for r in rows:
-        if wants_upload(r, cfg):
+        if r["album_pin"]:  # álbum escolhido pelo usuário na Revisão
+            pinned.append((r["album_pin"], r["id"]))
+        elif wants_upload(r, cfg):
             items.append((r["id"], datetime.fromisoformat(r["taken_at"]), r["date_source"], r["path"]))
         else:
             clear.append(r["id"])
     conn.executemany("UPDATE photos SET album_key=NULL WHERE id=?", [(i,) for i in clear])
+    conn.executemany("UPDATE photos SET album_key=? WHERE id=?", pinned)
 
     if cfg.album_mode == "ano":
         plan = plan_years(items, cfg.year_album_title)

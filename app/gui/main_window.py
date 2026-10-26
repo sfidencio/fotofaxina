@@ -64,6 +64,7 @@ class MainWindow(QMainWindow):
         self.inicio.forget_folder.connect(self.forget_folder)
         self.revisao.changed.connect(self.refresh_summary)
         self.albuns.regroup.connect(self.start_regroup)
+        self.albuns.merge.connect(self.start_merge)
         self.config_tab.connect_google.connect(self.start_connect)
         self.config_tab.download_ai.connect(self.start_download_ai)
         self.config_tab.saved.connect(self.refresh_summary)
@@ -166,6 +167,7 @@ class MainWindow(QMainWindow):
         # ações que apagam histórico ou o login ficam bloqueadas enquanto uma tarefa usa o banco
         self.inicio.set_busy(busy)
         self.revisao.set_busy(busy)
+        self.albuns.set_busy(busy)
         self.config_tab.set_busy(busy)
 
     def _clear_job(self):
@@ -217,6 +219,21 @@ class MainWindow(QMainWindow):
                                         _("Modelo de IA instalado. Na próxima análise ele já será usado."))
         elif name == "reagrupar":
             self.albuns.reload()
+        elif name == "juntar":
+            self.albuns.reload()
+            msg = _("{n} fotos foram juntadas no álbum de destino.").format(n=res.get("movidas", 0))
+            if res.get("vazios"):
+                links = "".join(f'<li><a href="{url}">{titulo}</a></li>' for titulo, url in res["vazios"] if url)
+                msg += "<br><br>" + _("Estes álbuns ficaram vazios. Abra cada um e apague-o no Google Fotos "
+                                      "(as fotos não são apagadas):") + f"<ul>{links}</ul>"
+            if res.get("nao_vazios"):
+                msg += "<br>" + _("Alguns itens não puderam ser movidos (foram colocados à mão no Google Fotos) "
+                                  "e ficaram em: {lista}").format(lista=", ".join(res["nao_vazios"]))
+            box = QMessageBox(self)
+            box.setWindowTitle(_("Juntar álbuns"))
+            box.setTextFormat(Qt.RichText)
+            box.setText(msg)
+            box.exec()
 
     def _job_failed(self, name: str, err: str):
         self._clear_job()
@@ -238,6 +255,10 @@ class MainWindow(QMainWindow):
             self.tabs.setCurrentWidget(self.config_tab)
             return
         self._run("enviar", pipeline.enviar, self.cfg)
+
+    def start_merge(self, target: str, sources: list):
+        self.tabs.setCurrentWidget(self.inicio)
+        self._run("juntar", pipeline.juntar_albuns, target, sources)
 
     def start_regroup(self):
         self._run("reagrupar", pipeline.reagrupar, self.cfg)
