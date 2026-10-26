@@ -89,7 +89,7 @@ class GoogleFalso:
 def reset():
     """Começa cada caso com banco vazio."""
     conn = db.connect()
-    db.forget_all(conn, keep_google=False)
+    db.forget_all(conn)
     conn.close()
     GoogleFalso.falhar_lotes = 0
     GoogleFalso.ao_enviar = None

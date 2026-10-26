@@ -96,8 +96,7 @@ def enviar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
     ).fetchall()
     rows = [r for r in rows if wants_upload(r, cfg)]
     uploaded_hashes = {
-        r[0] for r in conn.execute("SELECT sha256 FROM photos WHERE media_item_id IS NOT NULL "
-                                   "UNION SELECT sha256 FROM uploaded")
+        r[0] for r in conn.execute("SELECT sha256 FROM photos WHERE media_item_id IS NOT NULL")
     }
     total = len(rows)
     log(_("{n} itens para enviar").format(n=total))
@@ -198,7 +197,6 @@ def enviar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
                             (val, photo_id),
                         )
                         sha = conn.execute("SELECT sha256 FROM photos WHERE id=?", (photo_id,)).fetchone()[0]
-                        db.remember_upload(conn, sha, val, key)
                         uploaded_hashes.add(sha)
                         enviados += 1
                     else:

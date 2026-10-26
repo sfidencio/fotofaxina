@@ -87,41 +87,28 @@ def main():
     assert conn.execute("SELECT COUNT(*) FROM photos").fetchone()[0] == 3, "variações de caminho não foram unidas"
     assert conn.execute("SELECT media_item_id FROM photos WHERE id=?", (rid,)).fetchone()[0], "perdeu o envio"
 
-    # esquecer a pasta: a análise é refeita, mas o que já está no Google Fotos continua reconhecido
+    # esquecer a pasta: volta tudo para "a enviar"; álbum apagado no Google é recriado
     assert db.forget(conn, db.ids_under(conn, str(hd))) == 3
     conn.close()
     r = pipeline.processar(str(hd), cfg)
-    assert r["pasta"]["ja_no_google"] == 3 and r["pasta"]["a_enviar"] == 0, r["pasta"]
-    assert pipeline.enviar(cfg)["enviados_agora"] == 0, "fotos já enviadas subiram de novo"
-
-    # álbum apagado no Google Fotos: uma foto nova do mesmo mês recria o álbum
-    ex = Image.Exif()
-    ex[272] = "Celular"
-    ex.get_ifd(0x8769)[36867] = datetime(2014, 5, 20).strftime("%Y:%m:%d %H:%M:%S")
-    Image.new("RGB", (1000, 800), (200, 10, 10)).save(hd / "IMG_nova.jpg", exif=ex)
-    antes = hashes(hd)
+    assert r["pasta"]["a_enviar"] == 3, r["pasta"]
     conn = db.connect()
     GoogleFalso.albuns_apagados = {a[0] for a in conn.execute("SELECT google_id FROM albums") if a[0]}
     conn.close()
     assert GoogleFalso.albuns_apagados, "o álbum enviado deveria ter sido mantido"
-    pipeline.processar(str(hd), cfg)
     res = pipeline.enviar(cfg)
-    assert res["enviados_agora"] == 1 and res["erros_agora"] == 0, res
+    assert res["enviados_agora"] == 3 and res["erros_agora"] == 0, res
 
-    # esquecer itens e tudo (o padrão mantém a memória do Google; a opção extra apaga também)
+    # esquecer itens e tudo
     conn = db.connect()
     one = conn.execute("SELECT id FROM photos LIMIT 1").fetchone()[0]
     assert db.forget(conn, [one]) == 1
-    assert db.forget_all(conn) == 3
-    assert conn.execute("SELECT COUNT(*) FROM albums WHERE google_id IS NOT NULL").fetchone()[0] >= 1
-    assert conn.execute("SELECT COUNT(*) FROM uploaded").fetchone()[0] == 4
-    db.forget_all(conn, keep_google=False)
+    assert db.forget_all(conn) == 2
     assert conn.execute("SELECT COUNT(*) FROM albums").fetchone()[0] == 0
-    assert conn.execute("SELECT COUNT(*) FROM uploaded").fetchone()[0] == 0
     conn.close()
 
     assert hashes(hd) == antes, "arquivos de origem foram alterados!"
-    print("OK: esquecer pasta/itens/tudo sem reenviar, caminhos unidos e álbum recriado — arquivos intactos.")
+    print("OK: esquecer pasta/itens/tudo, caminhos unidos e álbum recriado — arquivos intactos.")
 
 
 if __name__ == "__main__":

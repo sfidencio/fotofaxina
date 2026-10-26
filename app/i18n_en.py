@@ -209,6 +209,10 @@ EN: dict[str, str] = {
     "Modelo de IA não encontrado nesta instalação — usando só as regras. Clique abaixo para baixar.":
         "AI model not found in this installation — using rules only. Click below to download it.",
     "Inteligência artificial": "Artificial intelligence",
+    "Os arquivos no seu computador NÃO serão apagados, nem nada no Google Fotos. O FotoFaxina só esquece o que sabe sobre eles: na próxima análise serão tratados como novos, e o que já tinha sido enviado poderá ser enviado de novo (ficando repetido no Google Fotos).":
+        "The files on your computer will NOT be deleted, and nothing in Google Photos either. FotoFaxina only "
+        "forgets what it knows about them: on the next analysis they will be treated as new, and anything "
+        "already uploaded may be uploaded again (appearing twice in Google Photos).",
     "Esquecer esta pasta…": "Forget this folder…",
     "Remove do histórico do FotoFaxina os registros da pasta escolhida (não apaga nenhum arquivo).":
         "Removes the chosen folder's records from FotoFaxina's history (no file is deleted).",
@@ -222,6 +226,7 @@ EN: dict[str, str] = {
         "FotoFaxina remembers what it already analyzed and uploaded so nothing is repeated. Clearing makes it "
         "start from scratch (files are not deleted).",
     "Limpar todo o histórico…": "Clear all history…",
+    "Limpar TODO o histórico (todas as pastas e álbuns)?": "Clear ALL history (every folder and album)?",
     "Limpar histórico": "Clear history",
     "{n} registros removidos. Seus arquivos continuam onde estavam.": "{n} records removed. Your files are still where they were.",
     "Não há registros desta pasta no histórico.": "There are no records of this folder in the history.",
@@ -262,18 +267,4 @@ EN: dict[str, str] = {
         "The AI is available: reclassifying {n} items that were previously decided without it.",
     "{n} aguardam o HD de origem ser plugado.": "{n} are waiting for their source drive to be plugged in.",
     "Aguarde a tarefa atual terminar.": "Wait for the current task to finish.",
-    "{n} arquivos já estavam no Google Fotos e não serão enviados de novo.":
-        "{n} files were already in Google Photos and won't be uploaded again.",
-    "Os arquivos no seu computador NÃO serão apagados, nem nada no Google Fotos. O FotoFaxina esquece a análise desses arquivos, mas lembra o que já está no Google Fotos: nada é enviado de novo e as fotos novas vão para os mesmos álbuns.":
-        "Files on your computer will NOT be deleted, nor anything in Google Photos. FotoFaxina forgets the "
-        "analysis of these files but remembers what is already in Google Photos: nothing is uploaded again "
-        "and new photos go to the same albums.",
-    "Limpar TODO o histórico de análise (todas as pastas)?": "Clear ALL analysis history (all folders)?",
-    "Os arquivos no seu computador NÃO serão apagados, nem nada no Google Fotos. O FotoFaxina continua lembrando o que já está no Google Fotos: nada é enviado de novo e as fotos novas vão para os álbuns que já existem (ex.: “Fotos 2023”).":
-        "Files on your computer will NOT be deleted, nor anything in Google Photos. FotoFaxina keeps "
-        "remembering what is already in Google Photos: nothing is uploaded again and new photos go to the "
-        "albums that already exist (e.g. “Photos 2023”).",
-    "Esquecer também o que já está no Google Fotos (os próximos envios criam álbuns novos e podem repetir fotos). Use só se trocou de conta Google.":
-        "Also forget what is already in Google Photos (next uploads create new albums and may repeat "
-        "photos). Only use this if you switched Google accounts.",
 }
