@@ -275,9 +275,8 @@ class MainWindow(QMainWindow):
             return
         text = (_("Esquecer os {n} registros da pasta\n{pasta}?").format(n=len(ids), pasta=self.root)
                 + "\n\n" + _("Os arquivos no seu computador NÃO serão apagados, nem nada no Google Fotos. "
-              "O FotoFaxina só esquece o que sabe sobre eles: na próxima análise serão tratados como "
-              "novos, e o que já tinha sido enviado poderá ser enviado de novo (ficando repetido no "
-              "Google Fotos)."))
+              "O FotoFaxina esquece a análise desses arquivos, mas lembra o que já está no Google "
+              "Fotos: nada é enviado de novo e as fotos novas vão para os mesmos álbuns."))
         if QMessageBox.question(self, _("Esquecer"), text) == QMessageBox.Yes:
             n = db.forget(conn, ids)
             self.log(_("{n} registros desta pasta foram esquecidos. Clique em Analisar para começar do zero.")

@@ -384,9 +384,8 @@ class RevisaoTab(QWidget):
         if not ids:
             return
         text = _("Esquecer {n} item(ns)?").format(n=len(ids)) + "\n\n" + _("Os arquivos no seu computador NÃO serão apagados, nem nada no Google Fotos. "
-              "O FotoFaxina só esquece o que sabe sobre eles: na próxima análise serão tratados como "
-              "novos, e o que já tinha sido enviado poderá ser enviado de novo (ficando repetido no "
-              "Google Fotos).")
+              "O FotoFaxina esquece a análise desses arquivos, mas lembra o que já está no Google "
+              "Fotos: nada é enviado de novo e as fotos novas vão para os mesmos álbuns.")
         if QMessageBox.question(self, _("Esquecer"), text) != QMessageBox.Yes:
             return
         conn = db.connect()
@@ -696,14 +695,23 @@ class ConfigTab(QWidget):
             )
 
     def _forget_all(self):
-        text = _("Limpar TODO o histórico (todas as pastas e álbuns)?") + "\n\n" + _("Os arquivos no seu computador NÃO serão apagados, nem nada no Google Fotos. "
-              "O FotoFaxina só esquece o que sabe sobre eles: na próxima análise serão tratados como "
-              "novos, e o que já tinha sido enviado poderá ser enviado de novo (ficando repetido no "
-              "Google Fotos).")
-        if QMessageBox.question(self, _("Limpar histórico"), text) != QMessageBox.Yes:
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Question)
+        box.setWindowTitle(_("Limpar histórico"))
+        box.setText(_("Limpar TODO o histórico de análise (todas as pastas)?"))
+        box.setInformativeText(_(
+            "Os arquivos no seu computador NÃO serão apagados, nem nada no Google Fotos. "
+            "O FotoFaxina continua lembrando o que já está no Google Fotos: nada é enviado de novo e "
+            "as fotos novas vão para os álbuns que já existem (ex.: “Fotos 2023”)."))
+        also = QCheckBox(_("Esquecer também o que já está no Google Fotos (os próximos envios criam "
+                           "álbuns novos e podem repetir fotos). Use só se trocou de conta Google."))
+        box.setCheckBox(also)
+        box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        box.setDefaultButton(QMessageBox.No)
+        if box.exec() != QMessageBox.Yes:
             return
         conn = db.connect()
-        n = db.forget_all(conn)
+        n = db.forget_all(conn, keep_google=not also.isChecked())
         conn.close()
         QMessageBox.information(self, _("Limpar histórico"),
                                 _("{n} registros removidos. Seus arquivos continuam onde estavam.").format(n=n))

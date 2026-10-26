@@ -133,8 +133,11 @@ O FotoFaxina lembra o que já analisou e enviou para não repetir. Para refazer 
 - **Início → Esquecer esta pasta…**: todos os registros da pasta escolhida.
 - **Configurações → Limpar todo o histórico…**: começa do zero.
 
-Nada disso apaga arquivos do computador ou do Google Fotos. Depois de esquecer, o que já tinha
-sido enviado pode ser enviado de novo (ficando repetido no Google Fotos).
+Nada disso apaga arquivos do computador ou do Google Fotos. O FotoFaxina esquece a análise, mas
+**continua lembrando o que já está no Google Fotos** (os álbuns criados e a impressão digital de cada
+foto enviada): depois de limpar, nada é enviado de novo e as fotos novas vão para os álbuns que já
+existem — por exemplo, a “parte 2” de 2023 entra no mesmo “Fotos 2023”. Para esquecer também isso
+(só faz sentido se você trocou de conta Google), marque a opção extra no aviso de limpeza.
 
 ## Idioma
 

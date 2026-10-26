@@ -65,6 +65,8 @@ jobs:
         run: python tests/test_duplicatas_parecidas.py
       - name: Fotos do mesmo evento vão para o mesmo álbum
         run: python tests/test_evento_continua.py
+      - name: Limpar o histórico não cria álbum repetido nem reenvia fotos
+        run: python tests/test_limpar_historico.py
       - name: Robustez (rede, HD desplugado, IA depois, login, letra do HD, vídeos…)
         env:
           QT_QPA_PLATFORM: offscreen

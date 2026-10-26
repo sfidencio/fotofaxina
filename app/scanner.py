@@ -290,6 +290,9 @@ def scan(root: str, cfg, progress=None, log=None, stop=None, workers: int | None
     if relocados:
         log(_("{n} arquivos já conhecidos em outro caminho (ex.: HD com outra letra); "
               "não foi preciso ler de novo.").format(n=relocados))
+    known = db.apply_uploaded(conn)  # já estavam no Google Fotos (ex.: antes de limpar o histórico)
+    if known:
+        log(_("{n} arquivos já estavam no Google Fotos e não serão enviados de novo.").format(n=known))
     dups = mark_duplicates(conn)
     log(_("{novos} arquivos novos; {dup} duplicatas no total (somando todas as pastas já analisadas)").format(
         novos=novos, dup=dups))

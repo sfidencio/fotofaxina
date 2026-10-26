@@ -132,8 +132,11 @@ FotoFaxina remembers what it already analyzed and uploaded so nothing is repeate
 - **Home → Forget this folder…**: every record of the chosen folder.
 - **Settings → Clear all history…**: start from scratch.
 
-None of this deletes files from your computer or from Google Photos. After forgetting, anything
-already uploaded may be uploaded again (appearing twice in Google Photos).
+None of this deletes files from your computer or from Google Photos. FotoFaxina forgets the
+analysis but **keeps remembering what is already in Google Photos** (the albums it created and a
+fingerprint of each uploaded photo): after clearing, nothing is uploaded again and new photos go to
+the albums that already exist — e.g. “part 2” of 2023 goes into the same “Photos 2023”. To forget that
+too (only useful if you switched Google accounts), tick the extra option in the clear warning.
 
 ## Language
 

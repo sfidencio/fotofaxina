@@ -39,6 +39,14 @@ CREATE INDEX IF NOT EXISTS idx_photos_status ON photos(status);
 CREATE INDEX IF NOT EXISTS idx_photos_album  ON photos(album_key);
 CREATE INDEX IF NOT EXISTS idx_photos_size   ON photos(size);
 
+-- memória do que já está no Google Fotos. Sobrevive a "Limpar todo o histórico": assim fotos já
+-- enviadas não sobem de novo e fotos novas continuam indo para os mesmos álbuns.
+CREATE TABLE IF NOT EXISTS uploaded(
+    sha256        TEXT PRIMARY KEY,
+    media_item_id TEXT NOT NULL,
+    album_key     TEXT
+);
+
 CREATE TABLE IF NOT EXISTS albums(
     key            TEXT PRIMARY KEY,
     title          TEXT NOT NULL,
@@ -52,7 +60,7 @@ CREATE TABLE IF NOT EXISTS albums(
 """
 
 
-SCHEMA_VERSION = 2  # suba ao mudar o esquema; a migração roda uma vez por banco
+SCHEMA_VERSION = 3  # suba ao mudar o esquema; a migração roda uma vez por banco
 _ready: set[str] = set()
 
 
@@ -84,6 +92,29 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE photos ADD COLUMN not_duplicate INTEGER DEFAULT 0")
         conn.commit()
     _merge_path_variants(conn)
+    # versão 3: memória do que já foi enviado, a partir do histórico existente
+    conn.execute("INSERT OR IGNORE INTO uploaded(sha256, media_item_id, album_key) "
+                 "SELECT sha256, media_item_id, album_key FROM photos "
+                 "WHERE media_item_id IS NOT NULL AND sha256 IS NOT NULL")
+    conn.commit()
+
+
+def remember_upload(conn: sqlite3.Connection, sha256: str, media_item_id: str, album_key: str | None) -> None:
+    conn.execute("INSERT OR REPLACE INTO uploaded(sha256, media_item_id, album_key) VALUES(?, ?, ?)",
+                 (sha256, media_item_id, album_key))
+
+
+def apply_uploaded(conn: sqlite3.Connection) -> int:
+    """Arquivos que já estão no Google Fotos (pela impressão digital SHA-256) são marcados como
+    enviados, mesmo depois de limpar o histórico ou analisar de outra pasta."""
+    n = conn.execute(
+        "UPDATE photos SET media_item_id=(SELECT u.media_item_id FROM uploaded u WHERE u.sha256=photos.sha256), "
+        "album_key=(SELECT u.album_key FROM uploaded u WHERE u.sha256=photos.sha256), "
+        "status='uploaded', error=NULL "
+        "WHERE media_item_id IS NULL AND sha256 IN (SELECT sha256 FROM uploaded)"
+    ).rowcount
+    conn.commit()
+    return n
 
 
 def norm_path(path: str) -> str:
@@ -116,8 +147,9 @@ def _merge_path_variants(conn: sqlite3.Connection) -> None:
 
 
 def forget(conn: sqlite3.Connection, ids: list[int]) -> int:
-    """Remove registros do banco do FotoFaxina. NÃO apaga arquivos nem nada no Google Fotos:
-    na próxima análise esses arquivos são tratados como novos (e podem ser enviados de novo)."""
+    """Remove registros do banco do FotoFaxina. NÃO apaga arquivos nem nada no Google Fotos.
+    Na próxima análise os arquivos são analisados de novo, mas o que já está no Google Fotos
+    continua reconhecido (tabela uploaded): não sobe de novo."""
     from .config import THUMBS_DIR
 
     params = [(i,) for i in ids]
@@ -165,11 +197,21 @@ def ids_under(conn: sqlite3.Connection, folder: str) -> list[int]:
     return [r["id"] for r in rows_under(conn, folder, "SELECT p.id, p.path FROM photos p")]
 
 
-def forget_all(conn: sqlite3.Connection) -> int:
+def forget_all(conn: sqlite3.Connection, keep_google: bool = True) -> int:
+    """Limpa o histórico de análise (registros, miniaturas, pendências, erros).
+
+    keep_google=True (padrão): mantém a memória do que já está no Google Fotos — os álbuns criados
+    e a impressão digital das fotos enviadas. Depois de limpar, fotos já enviadas não sobem de novo
+    e as novas vão para os álbuns que já existem.
+    keep_google=False: esquece também isso (começar do zero de verdade)."""
     from .config import THUMBS_DIR
 
     n = conn.execute("DELETE FROM photos").rowcount
-    conn.execute("DELETE FROM albums")
+    if keep_google:
+        conn.execute("DELETE FROM albums WHERE google_id IS NULL")
+    else:
+        conn.execute("DELETE FROM albums")
+        conn.execute("DELETE FROM uploaded")
     conn.commit()
     if THUMBS_DIR.exists():
         for f in THUMBS_DIR.glob("*.jpg"):
