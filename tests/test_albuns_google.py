@@ -27,6 +27,8 @@ from PIL import Image, ImageDraw  # noqa: E402
 from app import albums, db, google_photos, pipeline  # noqa: E402
 from app.config import TOKEN_PATH, Config  # noqa: E402
 
+_APP = None
+
 
 class GoogleFalso:
     """Google Fotos de mentira que guarda álbuns e itens, como a API real (só o que o app criou)."""
@@ -250,7 +252,8 @@ def telas():
 
     from app.gui.tabs import AlbumPicker, AlbunsTab
 
-    QApplication.instance() or QApplication([])
+    global _APP
+    _APP = QApplication.instance() or QApplication([])  # guardar a referência: sem ela o Qt pode cair
     reset()
     cfg = cfg_ano()
     pipeline.processar(fotos("tela", 2, datetime(2017, 1, 1)), cfg)
@@ -262,6 +265,9 @@ def telas():
     assert titulos.count("Fotos 2017") == 1, titulos  # não aparece duas vezes
     dlg = AlbumPicker()
     assert dlg.list.count() == 1 and dlg.selected_key()
+    dlg.deleteLater()
+    tab.deleteLater()
+    _APP.processEvents()
 
 
 def main():
