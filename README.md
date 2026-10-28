@@ -11,7 +11,7 @@
 
 O FotoFaxina faz a faxina nas fotos do seu HD: separa o que é foto de verdade do que é meme,
 print, figurinha e documento, remove duplicadas, monta álbuns (por evento, mês ou ano) e envia
-para o Google Fotos. Funciona em português e inglês, no Windows (instalador), Linux e macOS.
+para o Google Fotos. Funciona em português e inglês, no Windows (zip, sem instalar), Linux e macOS.
 
 ## Telas
 
@@ -25,16 +25,22 @@ para o Google Fotos. Funciona em português e inglês, no Windows (instalador), 
 
 ## Instalar (usuário final)
 
+Não tem instalador: é um zip com tudo dentro (inclusive o Python).
+
 1. Vá em **[Releases](https://github.com/sfidencio/fotofaxina/releases/latest)** e baixe
-   `FotoFaxina-Setup-x.y.z.exe`.
-2. Abra o arquivo. Se aparecer “O Windows protegeu o computador”, clique em
-   **Mais informações → Executar assim mesmo** (o instalador não tem assinatura digital paga).
-3. Avance até o fim. Não precisa de senha de administrador nem de Python.
-4. No primeiro uso o FotoFaxina oferece conectar sua conta Google. Depois é só plugar o HD.
+   `FotoFaxina-x.y.z-windows.zip`.
+2. Antes de extrair: botão direito no zip → **Propriedades** → marque **Desbloquear** → OK.
+3. Botão direito → **Extrair tudo…** (ex.: em `Documentos\FotoFaxina`).
+4. Abra a pasta extraída e dê dois cliques em **FotoFaxina.exe**. Se aparecer “O Windows protegeu o
+   computador”, clique em **Mais informações → Executar assim mesmo** (não tem assinatura digital paga).
+5. No primeiro uso o FotoFaxina oferece conectar sua conta Google. Depois: escolha a pasta → **Analisar**.
+
+Para atualizar, extraia a versão nova por cima. O histórico e o login ficam em
+`C:\Users\<você>\.fotofaxina` e são mantidos.
 
 O programa fica perto do relógio do Windows. Para ele analisar sozinho quando um HD for plugado,
 ligue a opção em Configurações (vem desligada).
-Para desinstalar: Configurações do Windows → Aplicativos → FotoFaxina.
+Para remover: apague a pasta extraída (e, se quiser, a pasta `.fotofaxina` com o histórico).
 
 ## Como funciona
 
@@ -74,7 +80,7 @@ Para desinstalar: Configurações do Windows → Aplicativos → FotoFaxina.
 ## Inteligência artificial (leve, sem internet, sem placa de vídeo)
 
 O FotoFaxina usa o modelo **CLIP** (OpenAI) convertido para **ONNX** e compactado em int8:
-cerca de 90 MB embutidos no instalador, rodando no processador com o **ONNX Runtime**
+cerca de 90 MB embutidos no pacote, rodando no processador com o **ONNX Runtime**
 (~15 MB) — em vez dos ~2 GB do PyTorch. As fotos **nunca saem do seu computador** para serem
 classificadas.
 
@@ -188,7 +194,7 @@ certificado da [SignPath Foundation](https://signpath.org/).
 - Autores e revisores (committers): [sfidencio](https://github.com/sfidencio)
 - Aprovador das assinaturas: [sfidencio](https://github.com/sfidencio)
 
-Os instaladores são gerados automaticamente pelo GitHub Actions a partir deste repositório
+Os pacotes são gerados automaticamente pelo GitHub Actions a partir deste repositório
 (`.github/workflows/release.yml`) e cada versão assinada é aprovada manualmente.
 
 ### Privacidade
@@ -228,10 +234,10 @@ pip install -r packaging/requirements-model.txt
 python packaging/build_model.py      # cria models/ (~90 MB)
 ```
 
-### Gerar uma nova versão do instalador
+### Gerar uma nova versão
 
 O GitHub Actions (`.github/workflows/release.yml`) faz tudo num Windows na nuvem: gera o modelo
-de IA, PyInstaller, instalador Inno Setup (português e inglês) e publica em Releases.
+de IA, PyInstaller, o zip para Windows e publica em Releases.
 
 **Basta mudar o número em `app/__init__.py`** (ex.: `1.1.0` → `1.1.1`) e dar push na `master`.
 Pushes que não mudam o número não geram versão nova.

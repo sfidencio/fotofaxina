@@ -12,7 +12,7 @@
 FotoFaxina (“photo cleanup” in Portuguese) tidies up the photos on your hard drive: it tells real
 photos apart from memes, screenshots, stickers and documents, removes duplicates, builds albums
 (by event, month or year) and uploads them to Google Photos. Available in English and Portuguese,
-on Windows (installer), Linux and macOS.
+on Windows (zip, no installation), Linux and macOS.
 
 ## Screenshots
 
@@ -26,16 +26,22 @@ on Windows (installer), Linux and macOS.
 
 ## Install (end users)
 
+There is no installer: it's a zip with everything inside (including Python).
+
 1. Go to **[Releases](https://github.com/sfidencio/fotofaxina/releases/latest)** and download
-   `FotoFaxina-Setup-x.y.z.exe`.
-2. Open it. If you see “Windows protected your PC”, click
-   **More info → Run anyway** (the installer is not digitally signed).
-3. Click through to the end. No administrator password or Python needed.
-4. On first launch FotoFaxina offers to connect your Google account. After that, just plug in the drive.
+   `FotoFaxina-x.y.z-windows.zip`.
+2. Before extracting: right-click the zip → **Properties** → tick **Unblock** → OK.
+3. Right-click → **Extract All…** (e.g. into `Documents\FotoFaxina`).
+4. Open the extracted folder and double-click **FotoFaxina.exe**. If you see “Windows protected your
+   PC”, click **More info → Run anyway** (it is not digitally signed).
+5. On first launch FotoFaxina offers to connect your Google account. Then: choose the folder → **Analyze**.
+
+To update, extract the new version over the old one. History and sign-in live in
+`C:\Users\<you>\.fotofaxina` and are kept.
 
 The app waits next to the Windows clock. To analyze automatically when a drive is plugged in, turn it on
 in Settings (it is off by default).
-To uninstall: Windows Settings → Apps → FotoFaxina.
+To remove it: delete the extracted folder (and, if you want, the `.fotofaxina` history folder).
 
 ## How it works
 
@@ -75,7 +81,7 @@ To uninstall: Windows Settings → Apps → FotoFaxina.
 ## Artificial intelligence (light, offline, no graphics card)
 
 FotoFaxina uses OpenAI's **CLIP** model converted to **ONNX** and quantized to int8: about 90 MB
-bundled in the installer, running on the CPU with **ONNX Runtime** (~15 MB) — instead of the
+bundled in the package, running on the CPU with **ONNX Runtime** (~15 MB) — instead of the
 ~2 GB of PyTorch. Your photos **never leave your computer** to be classified.
 
 - **Turn it on/off**: Settings → *Use AI to separate memes, screenshots and documents*.
@@ -185,7 +191,7 @@ Free code signing provided by [SignPath.io](https://about.signpath.io/), certifi
 - Committers and reviewers: [sfidencio](https://github.com/sfidencio)
 - Approvers: [sfidencio](https://github.com/sfidencio)
 
-Installers are built automatically by GitHub Actions from this repository
+Packages are built automatically by GitHub Actions from this repository
 (`.github/workflows/release.yml`) and every signed release is approved manually.
 
 ### Privacy
@@ -225,11 +231,10 @@ pip install -r packaging/requirements-model.txt
 python packaging/build_model.py      # creates models/ (~90 MB)
 ```
 
-### Releasing a new installer
+### Releasing a new version
 
 GitHub Actions (`.github/workflows/release.yml`) does everything on a cloud Windows machine:
-builds the AI model, PyInstaller, the Inno Setup installer (English and Portuguese) and publishes
-to Releases.
+builds the AI model, PyInstaller, the Windows zip and publishes to Releases.
 
 **Just bump the number in `app/__init__.py`** (e.g. `1.1.0` → `1.1.1`) and push to `master`.
 Pushes that don't change the number don't create a release.

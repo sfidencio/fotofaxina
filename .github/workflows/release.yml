@@ -178,18 +178,15 @@ jobs:
             throw "A IA não carregou dentro do executável"
           }
 
-      - name: Gerar instalador (Inno Setup)
+      - name: Empacotar (zip com o Python embutido)
         shell: pwsh
         run: |
-          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
-          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
-          & $iscc "/DAppVersion=$env:VERSION" packaging\installer.iss
-          if ($LASTEXITCODE -ne 0) { throw "Falha no Inno Setup" }
-          Compress-Archive -Path dist\FotoFaxina -DestinationPath "dist\FotoFaxina-portatil-$env:VERSION.zip"
+          # o FotoFaxina é distribuído como zip: baixar, extrair e abrir FotoFaxina.exe (sem instalar)
+          Compress-Archive -Path dist\FotoFaxina -DestinationPath "dist\FotoFaxina-$env:VERSION-windows.zip"
           # modelo de IA avulso: o botão "Baixar modelo de IA" do app (quem roda pelo código) usa este arquivo
           Compress-Archive -Path models -DestinationPath "dist\fotofaxina-ia-modelo.zip"
           # somas de verificação: quem baixa pode conferir que o arquivo é o original
-          Get-ChildItem dist\FotoFaxina-Setup-*.exe, dist\FotoFaxina-portatil-*.zip, dist\fotofaxina-ia-modelo.zip | ForEach-Object {
+          Get-ChildItem dist\FotoFaxina-*-windows.zip, dist\fotofaxina-ia-modelo.zip | ForEach-Object {
             "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)"
           } | Set-Content -Encoding ascii dist\SHA256SUMS.txt
           Get-Content dist\SHA256SUMS.txt
@@ -199,8 +196,7 @@ jobs:
         with:
           name: FotoFaxina-${{ env.VERSION }}
           path: |
-            dist/FotoFaxina-Setup-*.exe
-            dist/FotoFaxina-portatil-*.zip
+            dist/FotoFaxina-*-windows.zip
             dist/fotofaxina-ia-modelo.zip
             dist/SHA256SUMS.txt
 
@@ -213,31 +209,37 @@ jobs:
           name: FotoFaxina ${{ env.VERSION }}
           make_latest: true
           files: |
-            dist/FotoFaxina-Setup-*.exe
-            dist/FotoFaxina-portatil-*.zip
+            dist/FotoFaxina-*-windows.zip
             dist/fotofaxina-ia-modelo.zip
             dist/SHA256SUMS.txt
           body: |
-            ## 🇧🇷 Como instalar
-            1. Baixe **FotoFaxina-Setup-${{ env.VERSION }}.exe** (abaixo, em Assets).
-            2. Abra o arquivo. Se o Windows mostrar "O Windows protegeu o computador", clique em
-               **Mais informações → Executar assim mesmo** (o instalador ainda não tem assinatura digital).
-            3. Avance até o fim. Não precisa de senha de administrador nem de Python.
-            4. No FotoFaxina: **Conectar conta Google** → plugue o HD → confira → **Enviar**.
+            ## 🇧🇷 Como usar (sem instalar)
+            1. Baixe **FotoFaxina-${{ env.VERSION }}-windows.zip** (abaixo, em Assets).
+            2. **Antes de extrair:** clique com o botão direito no zip → **Propriedades** → marque
+               **Desbloquear** → OK. (Evita o aviso do Windows em cada arquivo.)
+            3. Clique com o botão direito → **Extrair tudo…** e escolha uma pasta, por exemplo `Documentos\FotoFaxina`.
+            4. Abra a pasta extraída e dê dois cliques em **FotoFaxina.exe**. Se aparecer "O Windows protegeu
+               o computador", clique em **Mais informações → Executar assim mesmo**.
+            5. No FotoFaxina: **Conectar conta Google** → escolha a pasta → **Analisar** → confira → **Enviar**.
 
+            Não precisa de Python nem de senha de administrador: tudo vem dentro do zip.
+            Para atualizar: extraia a versão nova por cima (ou em outra pasta) — o histórico e o login ficam em
+            `C:\Users\<você>\.fotofaxina` e são mantidos.
             Primeira vez configurando o Google? [Passo a passo em português](https://github.com/${{ github.repository }}/blob/master/docs/CONFIGURAR-GOOGLE.md).
-            Versão portátil (sem instalar): baixe o `.zip`, extraia e abra `FotoFaxina.exe`.
 
-            ## 🇺🇸 How to install
-            1. Download **FotoFaxina-Setup-${{ env.VERSION }}.exe** (below, under Assets).
-            2. Open it. If Windows shows "Windows protected your PC", click
-               **More info → Run anyway** (the installer is not digitally signed yet).
-            3. Click through to the end. No administrator password or Python needed.
-            4. In FotoFaxina: **Connect Google account** → plug in the drive → review → **Upload**.
+            ## 🇺🇸 How to use (no installation)
+            1. Download **FotoFaxina-${{ env.VERSION }}-windows.zip** (below, under Assets).
+            2. **Before extracting:** right-click the zip → **Properties** → tick **Unblock** → OK.
+            3. Right-click → **Extract All…** and pick a folder, e.g. `Documents\FotoFaxina`.
+            4. Open the extracted folder and double-click **FotoFaxina.exe**. If Windows shows "Windows protected
+               your PC", click **More info → Run anyway**.
+            5. In FotoFaxina: **Connect Google account** → choose the folder → **Analyze** → review → **Upload**.
 
+            No Python or administrator password needed: everything is inside the zip. To update, extract the new
+            version over the old one; your history and sign-in live in `C:\Users\<you>\.fotofaxina` and are kept.
             First time setting up Google? [Step-by-step guide](https://github.com/${{ github.repository }}/blob/master/docs/GOOGLE-SETUP.md).
 
             ---
-            🔒 O código é aberto e o instalador é gerado automaticamente pelo GitHub Actions a partir
-            deste repositório. Confira a integridade com o `SHA256SUMS.txt`. /
+            🔒 O código é aberto e o pacote é gerado automaticamente pelo GitHub Actions a partir deste
+            repositório. Confira a integridade com o `SHA256SUMS.txt`. /
             Open source, built automatically by GitHub Actions from this repository. Verify with `SHA256SUMS.txt`.
