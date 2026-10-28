@@ -31,8 +31,11 @@ Não tem instalador: é um zip com tudo dentro (inclusive o Python).
    `FotoFaxina-x.y.z-windows.zip`.
 2. Antes de extrair: botão direito no zip → **Propriedades** → marque **Desbloquear** → OK.
 3. Botão direito → **Extrair tudo…** (ex.: em `Documentos\FotoFaxina`).
-4. Abra a pasta extraída e dê dois cliques em **FotoFaxina.exe**. Se aparecer “O Windows protegeu o
-   computador”, clique em **Mais informações → Executar assim mesmo** (não tem assinatura digital paga).
+4. Abra a pasta extraída e dê dois cliques em **FotoFaxina.cmd**. Se não abrir, use
+   **FotoFaxina-diagnostico.cmd**, que mostra a mensagem de erro.
+
+O zip não tem executável próprio: traz o **Python oficial do python.org** (assinado pela Python
+Software Foundation, por isso os antivírus não reclamam) e o código-fonte do FotoFaxina.
 5. No primeiro uso o FotoFaxina oferece conectar sua conta Google. Depois: escolha a pasta → **Analisar**.
 
 Para atualizar, extraia a versão nova por cima. O histórico e o login ficam em
@@ -237,7 +240,7 @@ python packaging/build_model.py      # cria models/ (~90 MB)
 ### Gerar uma nova versão
 
 O GitHub Actions (`.github/workflows/release.yml`) faz tudo num Windows na nuvem: gera o modelo
-de IA, PyInstaller, o zip para Windows e publica em Releases.
+de IA, o zip para Windows (Python oficial embutido + código) e publica em Releases.
 
 **Basta mudar o número em `app/__init__.py`** (ex.: `1.1.0` → `1.1.1`) e dar push na `master`.
 Pushes que não mudam o número não geram versão nova.
@@ -276,5 +279,5 @@ app/pipeline.py            orquestra as etapas (retomável)
 app/i18n.py, i18n_en.py    tradução PT-BR / EN
 app/gui/                   janela, abas, tarefas em segundo plano
 assets/                    mascote e ícone (SVG + PNG/ICO gerados por packaging/render_assets.py)
-packaging/                 modelo de IA, PyInstaller, instalador, checagem de traduções
+packaging/                 modelo de IA, ícones, checagem de traduções
 ```

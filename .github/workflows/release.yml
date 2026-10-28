@@ -127,21 +127,12 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - name: Dependências
+      - name: Dependências (para os testes)
         shell: pwsh
         run: |
           python -m pip install --upgrade pip wheel
-          # versões fixas (packaging/constraints-windows.txt): o instalador não quebra sozinho
           pip install -r requirements.txt -c packaging/constraints-windows.txt
           if ($LASTEXITCODE -ne 0) { throw "Falha ao instalar as dependências" }
-          # PyInstaller com o "bootloader" compilado aqui mesmo: o bootloader padrão é usado por
-          # muito malware e por isso é alvo de falsos positivos nos antivírus.
-          $env:PYINSTALLER_COMPILE_BOOTLOADER = "1"
-          pip install --no-binary pyinstaller pyinstaller -c packaging/constraints-windows.txt
-          if ($LASTEXITCODE -ne 0) {
-            Write-Warning "Não deu para compilar o bootloader; usando o padrão."
-            pip install pyinstaller -c packaging/constraints-windows.txt
-          }
 
       - name: Conferir traduções
         run: python packaging/check_i18n.py
@@ -162,27 +153,66 @@ jobs:
         shell: pwsh
         run: Set-Content -Path packaging/client_secret.json -Value $env:GOOGLE_CLIENT_SECRET_JSON -Encoding utf8NoBOM
 
-      - name: Gerar executável (PyInstaller)
-        run: pyinstaller packaging/fotofaxina.spec --noconfirm
+      # Sem .exe próprio: o pacote leva o Python OFICIAL do python.org (python.exe/pythonw.exe
+      # assinados pela Python Software Foundation, confiáveis para os antivírus), o código-fonte e um
+      # FotoFaxina.cmd que abre o app.
+      - name: Montar o pacote (Python oficial embutido + código)
+        shell: pwsh
+        run: |
+          $pyver = "3.12.10"
+          $pkg = "pkg\FotoFaxina"
+          New-Item -ItemType Directory -Force $pkg, dist | Out-Null
+          Invoke-WebRequest "https://www.python.org/ftp/python/$pyver/python-$pyver-embed-amd64.zip" -OutFile python-embed.zip
+          Expand-Archive python-embed.zip "$pkg\python"
+          # o Python embutido só enxerga o que está no arquivo ._pth: as bibliotecas e a pasta do app
+          $pth = Get-ChildItem "$pkg\python\python*._pth" | Select-Object -First 1
+          $stdlib = (Get-ChildItem "$pkg\python\python3*.zip" | Select-Object -First 1).Name
+          Set-Content -Path $pth.FullName -Encoding ascii -Value @($stdlib, ".", "Lib\site-packages", "..", "import site")
+          # bibliotecas; do Qt, só o essencial (o PySide6 completo tem centenas de MB que o app não usa)
+          (Get-Content requirements.txt) -replace '^PySide6\b.*', 'PySide6-Essentials' | Set-Content req-pacote.txt
+          python -m pip install --no-compile --target "$pkg\python\Lib\site-packages" -r req-pacote.txt -c packaging/constraints-windows.txt
+          if ($LASTEXITCODE -ne 0) { throw "Falha ao instalar as bibliotecas no pacote" }
+          # código, ícones e modelo de IA
+          Copy-Item main.py, LICENSE, README.md, README.en.md $pkg
+          Copy-Item app $pkg -Recurse
+          New-Item -ItemType Directory -Force "$pkg\assets" | Out-Null
+          Copy-Item assets\icon-256.png, assets\icon.ico, assets\mascote-128.png "$pkg\assets"
+          Copy-Item models $pkg -Recurse
+          if (Test-Path packaging\client_secret.json) { Copy-Item packaging\client_secret.json $pkg }
+          Get-ChildItem $pkg -Recurse -Directory -Filter __pycache__ | Remove-Item -Recurse -Force
+          # atalhos
+          Set-Content -Encoding ascii "$pkg\FotoFaxina.cmd" -Value @(
+            '@echo off',
+            'rem Abre o FotoFaxina com o Python que vem nesta pasta (nao precisa instalar nada).',
+            'start "" "%~dp0python\pythonw.exe" "%~dp0main.py" %*')
+          Set-Content -Encoding ascii "$pkg\FotoFaxina-diagnostico.cmd" -Value @(
+            '@echo off',
+            'rem Abre o FotoFaxina mostrando as mensagens de erro (use se o FotoFaxina.cmd nao abrir).',
+            '"%~dp0python\python.exe" "%~dp0main.py" %*',
+            'pause')
+          "{0:N0} MB" -f ((Get-ChildItem $pkg -Recurse -File | Measure-Object Length -Sum).Sum / 1MB)
 
-      - name: Testar executável (análise + IA)
+      - name: Testar o pacote (Python embutido, IA e janela)
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force teste | Out-Null
           python -c "from PIL import Image, ImageDraw; im=Image.new('RGB',(900,900),'white'); d=ImageDraw.Draw(im); d.rectangle([0,0,900,150],fill='black'); im.save('teste/IMG-20240101-WA0001.jpg'); Image.new('RGB',(1200,800),(30,120,200)).save('teste/IMG-20240102-WA0002.jpg')"
           $env:FOTOFAXINA_DIR = "$pwd\teste-dados"
-          $p = Start-Process -FilePath dist\FotoFaxina\FotoFaxina.exe -ArgumentList "--cli","teste" -Wait -PassThru
-          Get-Content teste-dados\cli.log
-          if ($p.ExitCode -ne 0) { throw "O executável falhou (código $($p.ExitCode))" }
-          if (-not (Select-String -Path teste-dados\cli.log -Pattern "IA leve carregada|Lightweight AI loaded" -Quiet)) {
-            throw "A IA não carregou dentro do executável"
+          $py = "pkg\FotoFaxina\python\python.exe"
+          & $py pkg\FotoFaxina\main.py --cli teste *>&1 | Tee-Object -FilePath saida.txt
+          if ($LASTEXITCODE -ne 0) { throw "O pacote falhou (código $LASTEXITCODE)" }
+          if (-not (Select-String -Path saida.txt -Pattern "IA leve carregada|Lightweight AI loaded" -Quiet)) {
+            throw "A IA não carregou no pacote"
           }
+          $env:QT_QPA_PLATFORM = "offscreen"
+          & $py -c "from PySide6.QtWidgets import QApplication; a=QApplication([]); from app.config import Config; from app.gui.main_window import MainWindow; c=Config.load(); c.welcome_done=True; w=MainWindow(c); print('janela ok')"
+          if ($LASTEXITCODE -ne 0) { throw "A janela não abriu com o Python do pacote" }
 
-      - name: Empacotar (zip com o Python embutido)
+      - name: Empacotar (zip)
         shell: pwsh
         run: |
-          # o FotoFaxina é distribuído como zip: baixar, extrair e abrir FotoFaxina.exe (sem instalar)
-          Compress-Archive -Path dist\FotoFaxina -DestinationPath "dist\FotoFaxina-$env:VERSION-windows.zip"
+          7z a -tzip -mx=7 "dist\FotoFaxina-$env:VERSION-windows.zip" .\pkg\FotoFaxina | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "Falha ao gerar o zip" }
           # modelo de IA avulso: o botão "Baixar modelo de IA" do app (quem roda pelo código) usa este arquivo
           Compress-Archive -Path models -DestinationPath "dist\fotofaxina-ia-modelo.zip"
           # somas de verificação: quem baixa pode conferir que o arquivo é o original
@@ -190,6 +220,7 @@ jobs:
             "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)"
           } | Set-Content -Encoding ascii dist\SHA256SUMS.txt
           Get-Content dist\SHA256SUMS.txt
+          Get-ChildItem dist | Format-Table Name, Length
 
       - name: Guardar arquivos do build
         uses: actions/upload-artifact@v4
@@ -218,11 +249,13 @@ jobs:
             2. **Antes de extrair:** clique com o botão direito no zip → **Propriedades** → marque
                **Desbloquear** → OK. (Evita o aviso do Windows em cada arquivo.)
             3. Clique com o botão direito → **Extrair tudo…** e escolha uma pasta, por exemplo `Documentos\FotoFaxina`.
-            4. Abra a pasta extraída e dê dois cliques em **FotoFaxina.exe**. Se aparecer "O Windows protegeu
-               o computador", clique em **Mais informações → Executar assim mesmo**.
+            4. Abra a pasta extraída e dê dois cliques em **FotoFaxina.cmd**. (Se não abrir, use
+               **FotoFaxina-diagnostico.cmd**, que mostra a mensagem de erro.)
             5. No FotoFaxina: **Conectar conta Google** → escolha a pasta → **Analisar** → confira → **Enviar**.
 
-            Não precisa de Python nem de senha de administrador: tudo vem dentro do zip.
+            Não precisa instalar Python nem ter senha de administrador: o zip traz o Python oficial do
+            python.org (assinado pela Python Software Foundation) e o código-fonte do FotoFaxina — nenhum
+            executável próprio, o que evita alarmes falsos de antivírus.
             Para atualizar: extraia a versão nova por cima (ou em outra pasta) — o histórico e o login ficam em
             `C:\Users\<você>\.fotofaxina` e são mantidos.
             Primeira vez configurando o Google? [Passo a passo em português](https://github.com/${{ github.repository }}/blob/master/docs/CONFIGURAR-GOOGLE.md).
@@ -231,11 +264,13 @@ jobs:
             1. Download **FotoFaxina-${{ env.VERSION }}-windows.zip** (below, under Assets).
             2. **Before extracting:** right-click the zip → **Properties** → tick **Unblock** → OK.
             3. Right-click → **Extract All…** and pick a folder, e.g. `Documents\FotoFaxina`.
-            4. Open the extracted folder and double-click **FotoFaxina.exe**. If Windows shows "Windows protected
-               your PC", click **More info → Run anyway**.
+            4. Open the extracted folder and double-click **FotoFaxina.cmd**. (If it doesn't open, use
+               **FotoFaxina-diagnostico.cmd**, which shows the error message.)
             5. In FotoFaxina: **Connect Google account** → choose the folder → **Analyze** → review → **Upload**.
 
-            No Python or administrator password needed: everything is inside the zip. To update, extract the new
+            No need to install Python or an administrator password: the zip ships the official Python from
+            python.org (signed by the Python Software Foundation) plus FotoFaxina's source code — no custom
+            executable, which avoids antivirus false alarms. To update, extract the new
             version over the old one; your history and sign-in live in `C:\Users\<you>\.fotofaxina` and are kept.
             First time setting up Google? [Step-by-step guide](https://github.com/${{ github.repository }}/blob/master/docs/GOOGLE-SETUP.md).
 

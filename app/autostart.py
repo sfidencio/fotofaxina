@@ -1,15 +1,25 @@
-"""Iniciar junto com o Windows (chave Run do usuário, a mesma usada pelo instalador)."""
+"""Iniciar junto com o Windows (chave Run do usuário)."""
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 VALUE = "FotoFaxina"
 
 
 def supported() -> bool:
-    # só faz sentido no Windows e no programa instalado (.exe)
-    return sys.platform == "win32" and getattr(sys, "frozen", False)
+    return sys.platform == "win32"
+
+
+def command() -> str:
+    """Comando que o Windows roda ao iniciar: o Python que veio no pacote (sem janela preta) + main.py."""
+    if getattr(sys, "frozen", False):
+        return f'"{sys.executable}" --minimizado'
+    exe = Path(sys.executable)
+    quiet = exe.with_name("pythonw.exe")
+    main = Path(__file__).resolve().parent.parent / "main.py"
+    return f'"{quiet if quiet.exists() else exe}" "{main}" --minimizado'
 
 
 def is_enabled() -> bool:
@@ -32,7 +42,7 @@ def set_enabled(enabled: bool) -> None:
 
     with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE) as k:
         if enabled:
-            winreg.SetValueEx(k, VALUE, 0, winreg.REG_SZ, f'"{sys.executable}" --minimizado')
+            winreg.SetValueEx(k, VALUE, 0, winreg.REG_SZ, command())
         else:
             try:
                 winreg.DeleteValue(k, VALUE)

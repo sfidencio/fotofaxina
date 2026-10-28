@@ -32,8 +32,11 @@ There is no installer: it's a zip with everything inside (including Python).
    `FotoFaxina-x.y.z-windows.zip`.
 2. Before extracting: right-click the zip → **Properties** → tick **Unblock** → OK.
 3. Right-click → **Extract All…** (e.g. into `Documents\FotoFaxina`).
-4. Open the extracted folder and double-click **FotoFaxina.exe**. If you see “Windows protected your
-   PC”, click **More info → Run anyway** (it is not digitally signed).
+4. Open the extracted folder and double-click **FotoFaxina.cmd**. If it doesn't open, use
+   **FotoFaxina-diagnostico.cmd**, which shows the error message.
+
+The zip has no custom executable: it ships the **official Python from python.org** (signed by the Python
+Software Foundation, so antivirus software doesn't complain) plus FotoFaxina's source code.
 5. On first launch FotoFaxina offers to connect your Google account. Then: choose the folder → **Analyze**.
 
 To update, extract the new version over the old one. History and sign-in live in
@@ -234,7 +237,7 @@ python packaging/build_model.py      # creates models/ (~90 MB)
 ### Releasing a new version
 
 GitHub Actions (`.github/workflows/release.yml`) does everything on a cloud Windows machine:
-builds the AI model, PyInstaller, the Windows zip and publishes to Releases.
+builds the AI model, the Windows zip (official embedded Python + code) and publishes to Releases.
 
 **Just bump the number in `app/__init__.py`** (e.g. `1.1.0` → `1.1.1`) and push to `master`.
 Pushes that don't change the number don't create a release.
