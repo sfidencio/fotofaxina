@@ -32,7 +32,8 @@ para o Google Fotos. Funciona em português e inglês, no Windows (instalador), 
 3. Avance até o fim. Não precisa de senha de administrador nem de Python.
 4. No primeiro uso o FotoFaxina oferece conectar sua conta Google. Depois é só plugar o HD.
 
-O programa fica perto do relógio do Windows e começa a analisar sozinho quando um HD é plugado.
+O programa fica perto do relógio do Windows. Para ele analisar sozinho quando um HD for plugado,
+ligue a opção em Configurações (vem desligada).
 Para desinstalar: Configurações do Windows → Aplicativos → FotoFaxina.
 
 ## Como funciona
@@ -42,7 +43,8 @@ Para desinstalar: Configurações do Windows → Aplicativos → FotoFaxina.
 > (banco, miniaturas, configurações) fica na pasta de dados dele (`~/.fotofaxina`). Um teste
 > automático confere isso a cada versão (`tests/test_origem_intocada.py`).
 
-1. **Plugou o HD** → o app detecta e começa a análise sozinho.
+1. **Escolha a pasta ou o HD** e clique em **Analisar**. (Para analisar sozinho ao plugar o HD,
+   ligue em Configurações → *Analisar automaticamente quando um HD for plugado*; vem desligado.)
 2. **Varredura**: lê cada arquivo, calcula hash (duplicata exata) e hash perceptual
    (a mesma foto reenviada/recomprimida pelo WhatsApp), lê data e câmera do EXIF.
    Fotos em sequência quase iguais (rajada, a luz mudando) **não** são tratadas como cópia
@@ -112,6 +114,16 @@ erros mais comuns: [docs/CONFIGURAR-GOOGLE.md](docs/CONFIGURAR-GOOGLE.md)**
 - Uploads pela API ficam em **qualidade original e contam no armazenamento** da conta Google.
 - Existe um **limite diário de requisições**. Se for atingido, o app avisa e para; no dia
   seguinte, clique em Enviar e ele continua de onde parou.
+
+## Enviar por partes e conferir o que já foi
+
+- **Início → 2. Enviar tudo para o Google Fotos:** envia tudo o que está pendente, de todas as pastas.
+- **Início → Enviar só esta pasta:** só os arquivos da pasta/HD escolhido.
+- **Álbuns → Enviar só os selecionados:** só os álbuns marcados (ex.: “Fotos 2023”).
+- **Início → Conferir com o Google Fotos:** descobre o que já está no Google Fotos (pelo nome do
+  arquivo, dimensões e data das fotos que o FotoFaxina enviou) e deixa para enviar só o que falta.
+  Útil depois de limpar o histórico. O nome de cada arquivo que der erro no envio fica registrado
+  no `fotofaxina.log`, e o app avisa antes de limpar o histórico se houver fotos com erro.
 
 ## Álbuns no Google Fotos
 

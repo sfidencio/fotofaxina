@@ -69,6 +69,10 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: python tests/test_albuns_google.py
+      - name: Conferir com o Google Fotos, envio por álbum/pasta, HD sem análise automática
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python tests/test_conferir_e_envio_parcial.py
       - name: Robustez (rede, HD desplugado, IA depois, login, letra do HD, vídeos…)
         env:
           QT_QPA_PLATFORM: offscreen

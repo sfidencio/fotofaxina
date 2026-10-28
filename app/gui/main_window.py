@@ -62,6 +62,9 @@ class MainWindow(QMainWindow):
         self.inicio.stop.connect(self.stop_job)
         self.inicio.retry_errors.connect(self.retry_errors)
         self.inicio.forget_folder.connect(self.forget_folder)
+        self.inicio.upload_folder.connect(self.start_upload_folder)
+        self.inicio.check_google.connect(self.start_check)
+        self.albuns.upload_albums.connect(self.start_upload_albums)
         self.revisao.changed.connect(self.refresh_summary)
         self.albuns.regroup.connect(self.start_regroup)
         self.albuns.merge.connect(self.start_merge)
@@ -100,9 +103,10 @@ class MainWindow(QMainWindow):
         texto = _(
             "<h3>Bem-vindo ao FotoFaxina!</h3>"
             "<p>1. Conecte sua conta do Google Fotos.<br>"
-            "2. Plugue o HD (ou escolha uma pasta) — a análise começa sozinha.<br>"
+            "2. Escolha a pasta ou o HD e clique em <b>Analisar</b>.<br>"
             "3. Confira o resultado e clique em <b>Enviar para o Google Fotos</b>.</p>"
-            "<p>O programa fica perto do relógio do Windows, esperando o HD.</p>"
+            "<p>O programa fica perto do relógio do Windows. Para analisar sozinho ao plugar o HD, ligue a "
+            "opção em Configurações.</p>"
         )
         ask = google_photos.has_client_secret() and not TOKEN_PATH.exists()
         box = QMessageBox(self)
@@ -210,6 +214,12 @@ class MainWindow(QMainWindow):
             if res.get("ausentes_agora"):
                 msg += " " + _("{n} aguardam o HD de origem ser plugado.").format(n=res["ausentes_agora"])
             self.notify(_("Envio concluído"), msg)
+        elif name == "conferir" and isinstance(res, dict) and not res.get("parado"):
+            msg = _("{marcadas} fotos já estavam no Google Fotos. Falta enviar: {falta}.").format(
+                marcadas=res.get("marcadas", 0), falta=res.get("a_enviar", 0))
+            self.log(msg)
+            QMessageBox.information(self, _("Conferir com o Google Fotos"), msg + "\n\n" + _(
+                "Veja o que falta na aba Revisão (situação “Vão para o Google”) e clique em Enviar."))
         elif name == "conectar":
             QMessageBox.information(self, _("Google Fotos"), _("Conta conectada com sucesso!"))
         elif name == "baixar_ia":
@@ -249,12 +259,35 @@ class MainWindow(QMainWindow):
                 return
         self._run("analisar", pipeline.processar, self.root, self.cfg)
 
+    def _connected(self) -> bool:
+        if TOKEN_PATH.exists():
+            return True
+        QMessageBox.information(self, _("Google Fotos"), _("Conecte sua conta Google na aba Configurações primeiro."))
+        self.tabs.setCurrentWidget(self.config_tab)
+        return False
+
     def start_upload(self):
-        if not TOKEN_PATH.exists():
-            QMessageBox.information(self, _("Google Fotos"), _("Conecte sua conta Google na aba Configurações primeiro."))
-            self.tabs.setCurrentWidget(self.config_tab)
-            return
-        self._run("enviar", pipeline.enviar, self.cfg)
+        if self._connected():
+            self._run("enviar", pipeline.enviar, self.cfg)
+
+    def start_upload_folder(self):
+        if not self.root:
+            self.choose_folder()
+            if not self.root:
+                return
+        if self._connected():
+            self.log(_("Enviando só a pasta {pasta}").format(pasta=self.root))
+            self._run("enviar", lambda cfg, **kw: pipeline.enviar(cfg, folder=self.root, **kw), self.cfg)
+
+    def start_upload_albums(self, keys: list):
+        if keys and self._connected():
+            self.tabs.setCurrentWidget(self.inicio)
+            self._run("enviar", lambda cfg, **kw: pipeline.enviar(cfg, keys=keys, **kw), self.cfg)
+
+    def start_check(self):
+        if self._connected():
+            self.tabs.setCurrentWidget(self.inicio)
+            self._run("conferir", pipeline.conferir, self.root, self.cfg)
 
     def start_merge(self, target: str, sources: list):
         self.tabs.setCurrentWidget(self.inicio)
@@ -299,6 +332,11 @@ class MainWindow(QMainWindow):
               "O FotoFaxina só esquece o que sabe sobre eles: na próxima análise serão tratados como "
               "novos, e o que já tinha sido enviado poderá ser enviado de novo (ficando repetido no "
               "Google Fotos)."))
+        erros = conn.execute("SELECT COUNT(*) FROM photos WHERE status='error' AND media_item_id IS NULL "
+                             "AND id IN (%s)" % ",".join(str(int(i)) for i in ids)).fetchone()[0]
+        if erros:
+            text = _("Atenção: {n} foto(s) estão com erro de envio. Se continuar, o FotoFaxina esquece quais eram "
+            "(os nomes ficam só no fotofaxina.log). Use antes “Tentar erros de novo” e envie.").format(n=erros) + "\n\n" + text
         if QMessageBox.question(self, _("Esquecer"), text) == QMessageBox.Yes:
             n = db.forget(conn, ids)
             self.log(_("{n} registros desta pasta foram esquecidos. Clique em Analisar para começar do zero.")
@@ -323,11 +361,9 @@ class MainWindow(QMainWindow):
             self.notify(_("HD detectado"), _("Analisando {nome}…").format(nome=label))
             self.start_analyze()
         else:
-            self.show_normal()
-            if QMessageBox.question(self, _("HD detectado"),
-                                    _("Analisar as fotos de {nome}?").format(nome=label)) == QMessageBox.Yes:
-                self.set_root(mountpoint, label)
-                self.start_analyze()
+            # análise automática desligada: só avisa (sem abrir janela nem começar nada)
+            self.notify(_("HD detectado"), _("{nome} — para analisar, escolha a pasta e clique em Analisar.")
+                        .format(nome=label))
 
     # ---------------- janela/bandeja
     def show_normal(self):

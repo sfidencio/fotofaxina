@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 
-from . import albums, classifier, db, grouper, scanner
+from . import albums, classifier, db, grouper, reconcile, scanner
 from .config import Config, wants_upload
 from .google_photos import (BATCH_LIMIT, GooglePhotos, GooglePhotosError, NeedsReconnect, NotConnected,
                             QuotaExceeded)
@@ -72,7 +72,10 @@ def conectar_google(progress=_noop, log=_noop, stop=None) -> bool:
     return True
 
 
-def enviar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
+def enviar(cfg: Config, progress=_noop, log=_noop, stop=None, keys: list | None = None,
+           folder: str | None = None) -> dict:
+    """Envia o que está pendente. keys: só estes álbuns (ex.: ["ano-2023"]; inclui as continuações
+    "Título (2)"...). folder: só os arquivos desta pasta. Sem filtro: tudo."""
     # itens que ficaram pendentes (ex.: marcados como "Não é duplicata" na Revisão)
     classifier.classify(cfg, progress, log, stop)
     if stop is not None and stop.is_set():
@@ -114,6 +117,12 @@ def enviar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
         "AND album_key IS NOT NULL ORDER BY album_key, taken_at"
     ).fetchall()
     rows = [r for r in rows if wants_upload(r, cfg)]
+    if keys:
+        wanted = set(keys)
+        rows = [r for r in rows if r["album_key"] in wanted or r["album_key"].split("#")[0] in wanted]
+    if folder:
+        under = set(db.ids_under(conn, folder))
+        rows = [r for r in rows if r["id"] in under]
     uploaded_hashes = {
         r[0] for r in conn.execute("SELECT sha256 FROM photos WHERE media_item_id IS NOT NULL")
     }
@@ -134,6 +143,10 @@ def enviar(cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
 
     def fail(ids, msg):
         conn.executemany("UPDATE photos SET status='error', error=? WHERE id=?", [(msg[:500], i) for i in ids])
+        for i in ids:  # o nome de cada arquivo fica no fotofaxina.log, mesmo se o histórico for limpo
+            got = conn.execute("SELECT path FROM photos WHERE id=?", (i,)).fetchone()
+            if got is not None:
+                log(_("Não enviada: {arquivo} — {erro}").format(arquivo=got[0], erro=msg[:200]))
 
     try:
         for key, items in segments:
@@ -317,6 +330,35 @@ def juntar_albuns(target_key: str, source_keys: list[str], progress=_noop, log=_
         return albums.merge(conn, gp, target_key, source_keys, progress, log, stop)
     finally:
         conn.close()
+
+
+def conferir(root: str | None, cfg: Config, progress=_noop, log=_noop, stop=None) -> dict:
+    """Conferir com o Google Fotos: analisa a pasta (se escolhida) e marca como enviado o que já
+    está no Google Fotos. O que sobrar é o que falta enviar."""
+    if root:
+        res = processar(root, cfg, progress, log, stop)
+        if res.get("parado"):
+            return res
+    gp = _gp()
+    conn = db.connect()
+    try:
+        out = reconcile.reconcile(conn, gp, progress, log)
+    finally:
+        conn.close()
+    grouper.group(cfg, log)
+    conn = db.connect()
+    out.update(db.summary(conn, cfg))
+    if root:
+        out["pasta"] = folder_summary(conn, root, cfg)
+    conn.close()
+    return out
+
+
+def contar_erros() -> int:
+    conn = db.connect()
+    n = conn.execute("SELECT COUNT(*) FROM photos WHERE status='error' AND media_item_id IS NULL").fetchone()[0]
+    conn.close()
+    return n
 
 
 def tentar_erros_novamente() -> int:

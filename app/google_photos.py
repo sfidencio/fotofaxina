@@ -227,6 +227,23 @@ class GooglePhotos:
             if not token:
                 return out
 
+    def list_media_items(self) -> list[dict]:
+        """Fotos e vídeos que o FotoFaxina enviou: [{id, filename, width, height, creationTime}]."""
+        out, token = [], None
+        while True:
+            params = {"pageSize": 100}
+            if token:
+                params["pageToken"] = token
+            data = self._read("GET", f"{API}/mediaItems", params=params).json()
+            for m in data.get("mediaItems", []):
+                meta = m.get("mediaMetadata", {})
+                out.append({"id": m["id"], "filename": m.get("filename", ""),
+                            "width": int(meta.get("width", 0) or 0), "height": int(meta.get("height", 0) or 0),
+                            "creationTime": meta.get("creationTime")})
+            token = data.get("nextPageToken")
+            if not token:
+                return out
+
     def album_items(self, album_id: str) -> list[str]:
         """IDs das fotos/vídeos de um álbum (só os enviados pelo app)."""
         out, token = [], None

@@ -33,7 +33,8 @@ on Windows (installer), Linux and macOS.
 3. Click through to the end. No administrator password or Python needed.
 4. On first launch FotoFaxina offers to connect your Google account. After that, just plug in the drive.
 
-The app waits next to the Windows clock and starts analyzing as soon as a drive is plugged in.
+The app waits next to the Windows clock. To analyze automatically when a drive is plugged in, turn it on
+in Settings (it is off by default).
 To uninstall: Windows Settings → Apps → FotoFaxina.
 
 ## How it works
@@ -43,7 +44,8 @@ To uninstall: Windows Settings → Apps → FotoFaxina.
 > (database, thumbnails, settings) goes to its own data folder (`~/.fotofaxina`). An automated
 > test checks this on every release (`tests/test_origem_intocada.py`).
 
-1. **Drive plugged in** → the app notices and starts the analysis on its own.
+1. **Choose the folder or drive** and click **Analyze**. (To analyze automatically when a drive is
+   plugged in, turn on Settings → *Analyze automatically when a drive is plugged in*; it is off by default.)
 2. **Scan**: reads every file, computes a hash (exact duplicates) and a perceptual hash (the same
    photo re-sent/recompressed by WhatsApp), and reads the date and camera from EXIF.
    Nearly identical photos taken in sequence (burst, changing light) are **not** treated as
@@ -111,6 +113,16 @@ Google requires every program to have its own credential. Summary:
 - API uploads are stored in **original quality and count toward your Google storage**.
 - There is a **daily request limit**. If it is reached the app stops and tells you; the next day,
   click Upload and it continues where it left off.
+
+## Uploading in parts and checking what is already there
+
+- **Home → 2. Upload everything to Google Photos:** uploads everything pending, from all folders.
+- **Home → Upload only this folder:** only the files of the chosen folder/drive.
+- **Albums → Upload only selected:** only the selected albums (e.g. “Photos 2023”).
+- **Home → Check against Google Photos:** finds out what is already in Google Photos (by file name,
+  dimensions and date of the photos FotoFaxina uploaded) and leaves only what is missing. Useful after
+  clearing the history. The name of each file that fails to upload is written to `fotofaxina.log`,
+  and the app warns you before clearing the history if there are failed photos.
 
 ## Albums in Google Photos
 

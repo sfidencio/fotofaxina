@@ -58,7 +58,8 @@ class Config:
     event_gap_hours: float = 24.0          # intervalo sem fotos que separa dois eventos
     min_event_size: int = 8                # eventos menores vão para o álbum do mês
     reuse_same_name: bool = True           # usa álbum do Google (criado pelo app) com o mesmo nome
-    auto_scan_on_drive: bool = True        # analisa sozinho quando um HD é plugado
+    settings_version: int = 0              # ajustes feitos uma vez em configurações antigas
+    auto_scan_on_drive: bool = False       # analisa sozinho quando um HD é plugado
     auto_upload: bool = False              # envia sozinho após a análise (sem revisão)
     welcome_done: bool = False             # já mostrou a tela de boas-vindas
     min_image_side: int = 200              # imagens menores que isso viram "outro"
@@ -75,10 +76,17 @@ class Config:
             try:
                 data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
                 known = {k: v for k, v in data.items() if k in cls.__dataclass_fields__}
-                return cls(**known)
+                cfg = cls(**known)
+                if cfg.settings_version < 1:
+                    # v1: analisar sozinho ao plugar o HD passou a vir desligado (o usuário escolhe
+                    # quando analisar). Liga de novo em Configurações, se quiser.
+                    cfg.auto_scan_on_drive = False
+                    cfg.settings_version = 1
+                    cfg.save()
+                return cfg
             except (json.JSONDecodeError, TypeError):
                 pass
-        cfg = cls()
+        cfg = cls(settings_version=1)
         cfg.save()
         return cfg
 

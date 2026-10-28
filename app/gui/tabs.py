@@ -135,6 +135,8 @@ class InicioTab(QWidget):
     stop = Signal()
     retry_errors = Signal()
     forget_folder = Signal()
+    upload_folder = Signal()
+    check_google = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -157,7 +159,14 @@ class InicioTab(QWidget):
 
         self.btn_folder = QPushButton(_("Escolher pasta / HD…"))
         self.btn_analyze = QPushButton(_("1. Analisar"))
-        self.btn_upload = QPushButton(_("2. Enviar para o Google Fotos"))
+        self.btn_upload = QPushButton(_("2. Enviar tudo para o Google Fotos"))
+        self.btn_upload.setToolTip(_("Envia tudo o que está pendente, de todas as pastas analisadas."))
+        self.btn_upload_folder = QPushButton(_("Enviar só esta pasta"))
+        self.btn_upload_folder.setToolTip(_("Envia só os arquivos da pasta/HD escolhido. Para enviar um ano ou "
+                                            "álbum específico, use a aba Álbuns → “Enviar só os selecionados”."))
+        self.btn_check = QPushButton(_("Conferir com o Google Fotos"))
+        self.btn_check.setToolTip(_("Descobre o que já está no Google Fotos (ex.: depois de limpar o histórico) "
+                                    "e deixa para enviar só o que falta."))
         self.btn_stop = QPushButton(_("Parar"))
         self.btn_retry = QPushButton(_("Tentar erros de novo"))
         self.btn_forget = QPushButton(_("Esquecer esta pasta…"))
@@ -167,19 +176,24 @@ class InicioTab(QWidget):
         self.btn_stop.setEnabled(False)
         for b, name, tone in ((self.btn_folder, "folder", None), (self.btn_analyze, "analyze", "accent"),
                               (self.btn_upload, "upload", "accent"), (self.btn_stop, "stop", None),
+                              (self.btn_upload_folder, "upload", None), (self.btn_check, "sync", None),
                               (self.btn_retry, "retry", None), (self.btn_forget, "eraser", "danger")):
             set_icon(b, name, tone)
         for b, sig in ((self.btn_folder, self.choose_folder), (self.btn_analyze, self.analyze),
                        (self.btn_upload, self.upload), (self.btn_stop, self.stop),
-                       (self.btn_retry, self.retry_errors)):
+                       (self.btn_retry, self.retry_errors), (self.btn_upload_folder, self.upload_folder),
+                       (self.btn_check, self.check_google)):
             b.clicked.connect(lambda _checked=False, s=sig: s.emit())
 
         row = QHBoxLayout()
-        for b in (self.btn_folder, self.btn_analyze, self.btn_upload, self.btn_stop):
+        for b in (self.btn_folder, self.btn_analyze, self.btn_upload, self.btn_upload_folder, self.btn_stop):
             row.addWidget(b)
         row.addStretch()
-        row.addWidget(self.btn_forget)
-        row.addWidget(self.btn_retry)
+        row2 = QHBoxLayout()
+        row2.addWidget(self.btn_check)
+        row2.addStretch()
+        row2.addWidget(self.btn_forget)
+        row2.addWidget(self.btn_retry)
 
         self.stage_lbl = QLabel(_("Parado"))
         self.bar = QProgressBar()
@@ -197,6 +211,7 @@ class InicioTab(QWidget):
         lay.addWidget(self.source_lbl)
         lay.addWidget(self.account_lbl)
         lay.addLayout(row)
+        lay.addLayout(row2)
         lay.addWidget(self.stage_lbl)
         lay.addWidget(self.bar)
         lay.addWidget(self.summary_lbl)
@@ -204,7 +219,8 @@ class InicioTab(QWidget):
         lay.addWidget(self.logbox, 1)
 
     def set_busy(self, busy: bool):
-        for b in (self.btn_folder, self.btn_analyze, self.btn_upload, self.btn_retry, self.btn_forget):
+        for b in (self.btn_folder, self.btn_analyze, self.btn_upload, self.btn_retry, self.btn_forget,
+                  self.btn_upload_folder, self.btn_check):
             b.setEnabled(not busy)
         self.btn_stop.setEnabled(busy)
         if not busy:
@@ -530,6 +546,7 @@ class RevisaoTab(QWidget):
 class AlbunsTab(QWidget):
     regroup = Signal()
     merge = Signal(str, list)  # destino, álbuns a juntar (roda como tarefa na janela principal)
+    upload_albums = Signal(list)  # enviar só estes álbuns
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -564,6 +581,11 @@ class AlbunsTab(QWidget):
                                     "as fotos num só."))
         self.btn_merge.setEnabled(False)
         self.btn_merge.clicked.connect(self._merge)
+        self.btn_send = QPushButton(_("Enviar só os selecionados"))
+        self.btn_send.setToolTip(_("Envia só as fotos pendentes dos álbuns selecionados (ex.: “Fotos 2023”)."))
+        self.btn_send.setEnabled(False)
+        self.btn_send.clicked.connect(lambda: self.upload_albums.emit(self._selected_keys()))
+        set_icon(self.btn_send, "upload", "accent")
         set_icon(self.btn_share, "share", "accent")
         set_icon(btn, "regroup")
         set_icon(self.btn_fetch, "sync")
@@ -582,7 +604,7 @@ class AlbunsTab(QWidget):
         lay = QVBoxLayout(self)
         lay.addWidget(hint)
         top = QHBoxLayout()
-        for w in (self.btn_fetch, self.btn_new, self.btn_merge):
+        for w in (self.btn_send, self.btn_fetch, self.btn_new, self.btn_merge):
             top.addWidget(w)
         top.addStretch()
         lay.addLayout(top)
@@ -614,6 +636,7 @@ class AlbunsTab(QWidget):
         self.btn_share.setToolTip("" if url else _("Este álbum ainda não foi enviado ao Google Fotos."))
         on_google = [k for k in self._selected_keys() if self.gids.get(k)]
         self.btn_merge.setEnabled(len(on_google) >= 2 and not self._busy)
+        self.btn_send.setEnabled(bool(self._selected_keys()) and not self._busy)
 
     def _open_album(self):
         url = self.urls.get(self._selected_key() or "")
@@ -902,6 +925,10 @@ class ConfigTab(QWidget):
               "O FotoFaxina só esquece o que sabe sobre eles: na próxima análise serão tratados como "
               "novos, e o que já tinha sido enviado poderá ser enviado de novo (ficando repetido no "
               "Google Fotos).")
+        erros = pipeline.contar_erros()
+        if erros:
+            text = _("Atenção: {n} foto(s) estão com erro de envio. Se continuar, o FotoFaxina esquece quais eram "
+            "(os nomes ficam só no fotofaxina.log). Use antes “Tentar erros de novo” e envie.").format(n=erros) + "\n\n" + text
         if QMessageBox.question(self, _("Limpar histórico"), text) != QMessageBox.Yes:
             return
         conn = db.connect()

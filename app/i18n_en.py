@@ -345,4 +345,42 @@ EN: dict[str, str] = {
         'Move the photos of {n} album(s) into “{destino}”?',
     'Sim ({n} itens)':
         'Yes ({n} items)',
+    'Conferindo com o Google Fotos':
+        'Checking against Google Photos',
+    '{n} fotos/vídeos enviados pelo FotoFaxina encontrados no Google Fotos.':
+        '{n} photos/videos uploaded by FotoFaxina found in Google Photos.',
+    '{n} fotos da análise já estavam no Google Fotos e foram marcadas como enviadas.':
+        '{n} analyzed photos were already in Google Photos and were marked as uploaded.',
+    'Não consegui ler os álbuns: {erro}':
+        "Couldn't read the albums: {erro}",
+    'Não enviada: {arquivo} — {erro}':
+        'Not uploaded: {arquivo} — {erro}',
+    'Conferir com o Google Fotos':
+        'Check against Google Photos',
+    'Enviando só a pasta {pasta}':
+        'Uploading only the folder {pasta}',
+    '{nome} — para analisar, escolha a pasta e clique em Analisar.':
+        '{nome} — to analyze it, choose the folder and click Analyze.',
+    '{marcadas} fotos já estavam no Google Fotos. Falta enviar: {falta}.':
+        '{marcadas} photos were already in Google Photos. Still to upload: {falta}.',
+    'Veja o que falta na aba Revisão (situação “Vão para o Google”) e clique em Enviar.':
+        'See what is left in the Review tab (status “Go to Google”) and click Upload.',
+    'Atenção: {n} foto(s) estão com erro de envio. Se continuar, o FotoFaxina esquece quais eram (os nomes ficam só no fotofaxina.log). Use antes “Tentar erros de novo” e envie.':
+        'Warning: {n} photo(s) failed to upload. If you continue, FotoFaxina forgets which ones they were (the names stay only in fotofaxina.log). Use “Retry errors” and upload first.',
+    '2. Enviar tudo para o Google Fotos':
+        '2. Upload everything to Google Photos',
+    'Envia tudo o que está pendente, de todas as pastas analisadas.':
+        'Uploads everything pending, from all analyzed folders.',
+    'Enviar só esta pasta':
+        'Upload only this folder',
+    'Envia só os arquivos da pasta/HD escolhido. Para enviar um ano ou álbum específico, use a aba Álbuns → “Enviar só os selecionados”.':
+        'Uploads only the files of the chosen folder/drive. To upload a specific year or album, use the Albums tab → “Upload only selected”.',
+    'Descobre o que já está no Google Fotos (ex.: depois de limpar o histórico) e deixa para enviar só o que falta.':
+        'Finds out what is already in Google Photos (e.g. after clearing the history) and leaves only what is missing to upload.',
+    'Enviar só os selecionados':
+        'Upload only selected',
+    'Envia só as fotos pendentes dos álbuns selecionados (ex.: “Fotos 2023”).':
+        'Uploads only the pending photos of the selected albums (e.g. “Photos 2023”).',
+    '<h3>Bem-vindo ao FotoFaxina!</h3><p>1. Conecte sua conta do Google Fotos.<br>2. Escolha a pasta ou o HD e clique em <b>Analisar</b>.<br>3. Confira o resultado e clique em <b>Enviar para o Google Fotos</b>.</p><p>O programa fica perto do relógio do Windows. Para analisar sozinho ao plugar o HD, ligue a opção em Configurações.</p>':
+        '<h3>Welcome to FotoFaxina!</h3><p>1. Connect your Google Photos account.<br>2. Choose the folder or drive and click <b>Analyze</b>.<br>3. Review the result and click <b>Upload to Google Photos</b>.</p><p>The app stays next to the Windows clock. To analyze automatically when a drive is plugged in, turn it on in Settings.</p>',
 }
