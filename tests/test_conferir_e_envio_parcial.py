@@ -171,6 +171,35 @@ def mesmo_nome_outra_foto():
     assert sent == {str(a): True, str(b): False}, sent
 
 
+def videos_ja_enviados():
+    """Vídeo: a data do arquivo no PC é a da cópia; a do Google é a da gravação. Mesmo assim, com
+    nome único dos dois lados, é o mesmo vídeo e não pode ser reenviado."""
+    reset()
+    cfg = cfg_ano()
+    pasta = TMP / "videos"
+    pasta.mkdir()
+    for nome in ("VID_20190101_120000.mp4", "familia.mp4", "repetido.mp4"):
+        (pasta / nome).write_bytes(b"\0\0\0\x08mdat" + nome.encode() * 50)
+    (TMP / "videos2").mkdir()
+    (TMP / "videos2" / "repetido.mp4").write_bytes(b"\0\0\0\x08mdat" + b"outro" * 50)
+    pipeline.processar(str(TMP / "videos2"), cfg)
+    GoogleFalso.albums["alb1"] = {"title": "Fotos sem data", "items": []}
+    for i, nome in enumerate(("VID_20190101_120000.mp4", "familia.mp4", "repetido.mp4")):
+        mid = f"v{i}"
+        GoogleFalso.items[mid] = {"id": mid, "filename": nome, "width": 1920, "height": 1080,
+                                  "creationTime": "2016-03-10T15:00:00Z"}  # gravação antiga
+        GoogleFalso.albums["alb1"]["items"].append(mid)
+    r = pipeline.conferir(str(pasta), cfg)
+    conn = db.connect()
+    sent = {os.path.basename(x["path"]) + ("@2" if "videos2" in x["path"] else ""): bool(x["media_item_id"])
+            for x in conn.execute("SELECT path, media_item_id FROM photos")}
+    conn.close()
+    # nomes únicos: reconhecidos; "repetido.mp4" existe 2x no HD e a data não bate: não arrisca
+    assert sent == {"VID_20190101_120000.mp4": True, "familia.mp4": True,
+                    "repetido.mp4": False, "repetido.mp4@2": False}, sent
+    assert r["marcadas"] == 2, r
+
+
 def enviar_so_um_ano():
     reset()
     cfg = cfg_ano()
@@ -240,7 +269,7 @@ def main():
     pipeline.GooglePhotos = GoogleFalso
     TOKEN_PATH.parent.mkdir(parents=True, exist_ok=True)
     TOKEN_PATH.write_text("{}")
-    casos = [conferir_depois_de_limpar, mesmo_nome_outra_foto, enviar_so_um_ano, enviar_so_uma_pasta,
+    casos = [conferir_depois_de_limpar, mesmo_nome_outra_foto, videos_ja_enviados, enviar_so_um_ano, enviar_so_uma_pasta,
              analise_automatica_desligada, hd_plugado_nao_analisa_sozinho]
     falhas = 0
     for caso in casos:

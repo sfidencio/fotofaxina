@@ -61,30 +61,42 @@ def reconcile(conn, gp, progress=None, log=None) -> dict:
         m["dt"] = _google_time(m.get("creationTime"))
         by_name.setdefault(m["filename"].lower(), []).append(m)
 
+    # quantas vezes cada nome aparece no HD (todas as análises): nome único dos dois lados = mesmo arquivo
+    local_names: dict[str, int] = {}
+    for (path,) in conn.execute("SELECT path FROM photos"):
+        n = os.path.basename(path).lower()
+        local_names[n] = local_names.get(n, 0) + 1
+    already = {r[0] for r in conn.execute("SELECT media_item_id FROM photos WHERE media_item_id IS NOT NULL")}
+
     local = conn.execute(
-        "SELECT id, path, width, height, taken_at, is_video FROM photos WHERE media_item_id IS NULL"
+        "SELECT id, path, width, height, taken_at, is_video FROM photos WHERE media_item_id IS NULL "
+        "AND duplicate_of IS NULL"
     ).fetchall()
     found = 0
     for r in local:
-        cands = by_name.get(os.path.basename(r["path"]).lower(), [])
+        name = os.path.basename(r["path"]).lower()
+        cands = [m for m in by_name.get(name, []) if m["id"] not in already]
         if not cands:
             continue
         dt = datetime.fromisoformat(r["taken_at"]) if r["taken_at"] else None
         if not r["is_video"] and r["width"] and r["height"]:
             dims = {(r["width"], r["height"]), (r["height"], r["width"])}  # pode estar girada
             cands = [m for m in cands if (m["width"], m["height"]) in dims or not m["width"]]
+            if not cands:
+                continue
+        if len(cands) == 1 and local_names.get(name, 0) == 1:
+            best = cands[0]  # nome único no HD e no Google: é o mesmo arquivo (vídeos inclusive)
         else:
-            cands = [m for m in cands if _hours(m["dt"], dt) <= 48]  # vídeo: nome + data
-        if not cands:
-            continue
-        best = min(cands, key=lambda m: _hours(m["dt"], dt))
-        if len(cands) > 1 and _hours(best["dt"], dt) > 48:
-            continue  # vários com o mesmo nome e nenhum com data próxima: não arrisca
+            # nomes repetidos (ex.: IMG_0001 de câmeras diferentes): desempata pela data
+            best = min(cands, key=lambda m: _hours(m["dt"], dt))
+            if _hours(best["dt"], dt) > 48:
+                continue  # nenhum com data próxima: não arrisca
         conn.execute(
             "UPDATE photos SET media_item_id=?, status='uploaded', error=NULL, "
             "album_key=COALESCE(?, album_key) WHERE id=?",
             (best["id"], in_album.get(best["id"]), r["id"]),
         )
+        already.add(best["id"])
         found += 1
     conn.commit()
     log(_("{n} fotos da análise já estavam no Google Fotos e foram marcadas como enviadas.").format(n=found))
