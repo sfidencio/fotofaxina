@@ -47,6 +47,50 @@ def lixeira_falsa(path):
     shutil.move(path, LIXEIRA / os.path.basename(path))
 
 
+def duplicatas():
+    """Cópias idênticas: marcar e excluir tira só as cópias; o original sempre sobra."""
+    from app import cleanup, db, pipeline
+    from app.config import Config
+
+    hd = TMP / "hd2"
+    hd.mkdir()
+    ex = Image.Exif()
+    ex[272] = "Celular"
+    ex.get_ifd(0x8769)[36867] = datetime(2020, 1, 1).strftime("%Y:%m:%d %H:%M:%S")
+    Image.new("RGB", (1000, 800), (7, 80, 160)).save(hd / "original.jpg", exif=ex)
+    for n in ("copia1.jpg", "copia2.jpg"):
+        shutil.copy(hd / "original.jpg", hd / n)
+    cfg = Config.load()
+    pipeline.processar(str(hd), cfg)
+    conn = db.connect()
+    conn.execute("UPDATE photos SET delete_mark=0")  # sobras do caso anterior
+    conn.commit()
+    rows = {os.path.basename(r["path"]): r for r in conn.execute("SELECT * FROM photos WHERE path LIKE ?", (f"{hd}%",))}
+    keeper = next(r for r in rows.values() if r["duplicate_of"] is None)
+    copias = [r for r in rows.values() if r["duplicate_of"] is not None]
+    assert len(copias) == 2
+
+    assert cleanup.mark_identical_duplicates(conn) == 2
+    assert cleanup.mark(conn, [keeper["id"]]) == 0  # o original (foto) não pode ser marcado
+    res = cleanup.trash_marked(conn, trasher=lixeira_falsa)
+    assert res["lixeira"] == 2 and not res["falhas"], res
+    assert os.path.exists(keeper["path"]) and not any(os.path.exists(c["path"]) for c in copias)
+
+    # original também marcado (aqui um print): a cópia NÃO é excluída, para não ficar sem nenhum exemplar
+    Image.new("RGB", (1080, 2000), (9, 9, 9)).save(hd / "Screenshot_20200101-000000.png")
+    shutil.copy(hd / "Screenshot_20200101-000000.png", hd / "Screenshot_20200101-000001.png")
+    pipeline.processar(str(hd), cfg)
+    rows = {os.path.basename(r["path"]): r for r in conn.execute("SELECT * FROM photos WHERE path LIKE ?", (f"{hd}%",))}
+    orig = next(r for r in rows.values() if r["path"].endswith(".png") and r["duplicate_of"] is None)
+    copia = next(r for r in rows.values() if r["path"].endswith(".png") and r["duplicate_of"] is not None)
+    assert orig["category"] == "print"
+    cleanup.mark(conn, [orig["id"], copia["id"]])
+    res = cleanup.trash_marked(conn, trasher=lixeira_falsa)
+    assert os.path.exists(copia["path"]) != os.path.exists(orig["path"]), "tem que sobrar exatamente um exemplar"
+    assert os.path.exists(copia["path"]) and len(res["falhas"]) == 1, res
+    conn.close()
+
+
 def main():
     hd = TMP / "hd"
     (hd / "Prints").mkdir(parents=True)
@@ -160,6 +204,7 @@ def main():
     assert cleanup.clear_google_pending(conn) == 2
     assert cleanup.write_report(conn) is None
     conn.close()
+    duplicatas()
     print("OK: só o que foi marcado foi para a lixeira; lista do Google gerada para os itens já enviados.")
 
 

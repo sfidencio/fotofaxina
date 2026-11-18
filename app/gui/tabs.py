@@ -319,7 +319,7 @@ class RevisaoTab(QWidget):
         btn_forget.clicked.connect(self._forget_selected)
         self.btn_forget = btn_forget
         btn_mark = QPushButton(_("Marcar para excluir"))
-        btn_mark.setToolTip(_("Só memes, prints, figurinhas e documentos podem ser marcados. Nada é "
+        btn_mark.setToolTip(_("Só memes, prints, figurinhas, documentos e cópias (duplicatas) podem ser marcados. Nada é "
                               "apagado até você usar “Excluir marcadas do HD…”."))
         btn_mark.clicked.connect(lambda: self._mark_delete(True))
         btn_unmark = QPushButton(_("Desmarcar"))
@@ -332,7 +332,11 @@ class RevisaoTab(QWidget):
         btn_glist.setToolTip(_("O que foi excluído do HD mas continua no Google Fotos (o Google não deixa "
                                "aplicativos apagarem fotos)."))
         btn_glist.clicked.connect(self._google_list)
-        self.clean_buttons = [btn_mark, btn_unmark, self.btn_trash, btn_glist]
+        btn_dups = QPushButton(_("Marcar todas as cópias idênticas"))
+        btn_dups.setToolTip(_("Marca todas as duplicatas idênticas ao original (mesmo conteúdo). O original "
+                              "nunca é excluído: sempre sobra um exemplar."))
+        btn_dups.clicked.connect(self._mark_identical)
+        self.clean_buttons = [btn_mark, btn_unmark, self.btn_trash, btn_glist, btn_dups]
         btn_send.clicked.connect(lambda: self._set_decision("upload"))
         btn_skip.clicked.connect(lambda: self._set_decision("skip"))
         btn_auto.clicked.connect(lambda: self._set_decision(None))
@@ -354,7 +358,7 @@ class RevisaoTab(QWidget):
 
         clean = QHBoxLayout()
         clean.addWidget(QLabel(_("Limpeza do HD:")))
-        for w in (btn_mark, btn_unmark, self.btn_trash):
+        for w in (btn_mark, btn_unmark, btn_dups, self.btn_trash):
             clean.addWidget(w)
         clean.addStretch()
         clean.addWidget(btn_glist)
@@ -435,6 +439,10 @@ class RevisaoTab(QWidget):
             mark = "✕ "
         conf = f" {r['confidence']:.0%}" if r["confidence"] is not None and r["category_by"] == "ia" else ""
         date = (r["taken_at"] or "")[:10]
+        if r["duplicate_of"] is not None:
+            orig = self.originals.get(r["duplicate_of"])
+            kind = "" if orig is None else (" " + (_("idêntica") if orig[2] == r["sha256"] else _("parecida")))
+            return f"{mark}{_('Cópia')}{kind}\n{date}"
         return f"{mark}{cat_label(r['category'])}{conf}\n{date}"
 
     def _show_more(self):
@@ -446,9 +454,9 @@ class RevisaoTab(QWidget):
             conn = db.connect()
             for i in range(0, len(wanted), 500):
                 part = wanted[i:i + 500]
-                for o in conn.execute(f"SELECT id, path, media_item_id FROM photos WHERE id IN "
+                for o in conn.execute(f"SELECT id, path, media_item_id, sha256 FROM photos WHERE id IN "
                                       f"({','.join('?' * len(part))})", part):
-                    self.originals[o["id"]] = (o["path"], bool(o["media_item_id"]))
+                    self.originals[o["id"]] = (o["path"], bool(o["media_item_id"]), o["sha256"])
             conn.close()
         thumbs = []
         for r in chunk:
@@ -465,9 +473,10 @@ class RevisaoTab(QWidget):
                 tip.append(_("Marcada para excluir do HD") + (" " + _("(continuará no Google Fotos)")
                                                               if r["media_item_id"] else ""))
             if r["duplicate_of"] is not None and r["duplicate_of"] in self.originals:
-                orig, sent = self.originals[r["duplicate_of"]]
+                orig, sent, _sha = self.originals[r["duplicate_of"]]
                 tip.append(_("Duplicata de: {arquivo}").format(arquivo=orig)
                            + (" " + _("(já está no Google Fotos)") if sent else ""))
+                tip.append(_("O original é mantido; só esta cópia pode ser excluída."))
             it.setToolTip("\n".join(tip))
             self.list.addItem(it)
             self.items_by_id[r["id"]] = it
@@ -562,8 +571,18 @@ class RevisaoTab(QWidget):
         conn.close()
         if flag and n < len(ids):
             QMessageBox.information(self, _("Marcar para excluir"), _(
-                "{n} item(ns) marcados. {ign} ignorados: só memes, prints, figurinhas e documentos "
-                "podem ser marcados.").format(n=n, ign=len(ids) - n))
+                "{n} item(ns) marcados. {ign} ignorados: só memes, prints, figurinhas, documentos e "
+                "cópias (duplicatas) podem ser marcados.").format(n=n, ign=len(ids) - n))
+        self.reload()
+        self.changed.emit()
+
+    def _mark_identical(self):
+        conn = db.connect()
+        n = cleanup.mark_identical_duplicates(conn)
+        conn.close()
+        QMessageBox.information(self, _("Marcar para excluir"), (
+            _("{n} cópia(s) idênticas marcadas. Os originais ficam. Para excluir, use “Excluir marcadas do HD…”.")
+            if n else _("Nenhuma cópia idêntica nova para marcar.")).format(n=n))
         self.reload()
         self.changed.emit()
 

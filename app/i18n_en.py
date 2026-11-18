@@ -401,8 +401,8 @@ EN: dict[str, str] = {
         '(no album)',
     'Marcar para excluir':
         'Mark for deletion',
-    'Só memes, prints, figurinhas e documentos podem ser marcados. Nada é apagado até você usar “Excluir marcadas do HD…”.':
-        'Only memes, screenshots, stickers and documents can be marked. Nothing is deleted until you use “Delete marked from drive…”.',
+    'Só memes, prints, figurinhas, documentos e cópias (duplicatas) podem ser marcados. Nada é apagado até você usar “Excluir marcadas do HD…”.':
+        'Only memes, screenshots, stickers, documents and copies (duplicates) can be marked. Nothing is deleted until you use “Delete marked from drive…”.',
     'Desmarcar':
         'Unmark',
     'Excluir marcadas do HD…':
@@ -445,8 +445,8 @@ EN: dict[str, str] = {
         '{n} item(s) deleted from the drive are still in Google Photos. Open the list, delete them at photos.google.com and then click “I deleted them on Google”.',
     'Marcada para excluir do HD':
         'Marked for deletion from the drive',
-    '{n} item(ns) marcados. {ign} ignorados: só memes, prints, figurinhas e documentos podem ser marcados.':
-        '{n} item(s) marked. {ign} ignored: only memes, screenshots, stickers and documents can be marked.',
+    '{n} item(ns) marcados. {ign} ignorados: só memes, prints, figurinhas, documentos e cópias (duplicatas) podem ser marcados.':
+        '{n} item(s) marked. {ign} ignored: only memes, screenshots, stickers, documents and copies (duplicates) can be marked.',
     '{n} deles já estão no Google Fotos. O Google não deixa aplicativos apagarem fotos: o FotoFaxina vai gerar uma lista para você apagar lá.':
         '{n} of them are already in Google Photos. Google does not let apps delete photos: FotoFaxina will generate a list for you to delete them there.',
     '{n} já não existiam no HD.':
@@ -459,4 +459,24 @@ EN: dict[str, str] = {
         '{n} were already in Google Photos and are still there. Open the list to delete them?',
     '(continuará no Google Fotos)':
         '(will remain in Google Photos)',
+    'Marcar todas as cópias idênticas':
+        'Mark all identical copies',
+    'Marca todas as duplicatas idênticas ao original (mesmo conteúdo). O original nunca é excluído: sempre sobra um exemplar.':
+        'Marks every duplicate identical to the original (same content). The original is never deleted: one copy always remains.',
+    'O original é mantido; só esta cópia pode ser excluída.':
+        'The original is kept; only this copy can be deleted.',
+    'idêntica':
+        'identical',
+    'parecida':
+        'similar',
+    'Cópia':
+        'Copy',
+    '{n} cópia(s) idênticas marcadas. Os originais ficam. Para excluir, use “Excluir marcadas do HD…”.':
+        '{n} identical copy(ies) marked. The originals stay. To delete, use “Delete marked from drive…”.',
+    'Nenhuma cópia idêntica nova para marcar.':
+        'No new identical copies to mark.',
+    'o original desta cópia não está no histórico':
+        'the original of this copy is not in the history',
+    'o original desta cópia está marcado para excluir ou não foi encontrado':
+        'the original of this copy is marked for deletion or was not found',
 }

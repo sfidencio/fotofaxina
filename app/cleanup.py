@@ -57,8 +57,9 @@ def mark(conn, ids: list[int], flag: bool = True) -> int:
     Retorna quantos itens mudaram."""
     n = 0
     for i in ids:
-        if flag:
-            n += conn.execute(f"UPDATE photos SET delete_mark=1 WHERE id=? AND category IN ({_MARKS})",
+        if flag:  # cópias (duplicatas) também podem; o original é protegido na hora de excluir
+            n += conn.execute(f"UPDATE photos SET delete_mark=1 WHERE id=? AND "
+                              f"(category IN ({_MARKS}) OR duplicate_of IS NOT NULL)",
                               (i, *DELETABLE)).rowcount
         else:
             n += conn.execute("UPDATE photos SET delete_mark=0 WHERE id=? AND delete_mark=1", (i,)).rowcount
@@ -66,11 +67,24 @@ def mark(conn, ids: list[int], flag: bool = True) -> int:
     return n
 
 
+def mark_identical_duplicates(conn) -> int:
+    """Marca todas as cópias IDÊNTICAS (mesmo SHA-256 do original) cujo original não está marcado."""
+    n = conn.execute(
+        "UPDATE photos SET delete_mark=1 WHERE duplicate_of IS NOT NULL AND COALESCE(delete_mark,0)=0 "
+        "AND sha256 IS NOT NULL AND duplicate_of IN (SELECT k.id FROM photos k "
+        "WHERE k.sha256 = photos.sha256 AND COALESCE(k.delete_mark,0)=0)").rowcount
+    conn.commit()
+    return n
+
+
 def _marked(conn) -> list:
     # a categoria é conferida de novo aqui: mudar a categoria depois de marcar não pode apagar uma foto
     return conn.execute(
-        "SELECT p.*, a.title AS album_title FROM photos p LEFT JOIN albums a ON a.key = p.album_key "
-        f"WHERE p.delete_mark=1 AND p.category IN ({_MARKS}) ORDER BY p.id", DELETABLE).fetchall()
+        f"SELECT p.*, a.title AS album_title, k.path AS keeper_path, CASE WHEN k.delete_mark=1 AND (k.category IN ({_MARKS}) OR k.duplicate_of IS NOT NULL) "
+        "THEN 1 ELSE 0 END AS keeper_marked "
+        "FROM photos p LEFT JOIN albums a ON a.key = p.album_key LEFT JOIN photos k ON k.id = p.duplicate_of "
+        f"WHERE p.delete_mark=1 AND (p.category IN ({_MARKS}) OR p.duplicate_of IS NOT NULL) "
+        "ORDER BY p.id", (*DELETABLE, *DELETABLE)).fetchall()
 
 
 def preview(conn) -> dict:
@@ -99,6 +113,13 @@ def trash_marked(conn, progress=None, stop=None, trasher=None) -> dict:
             break
         progress(i, len(rows), os.path.basename(r["path"]))
         path = r["path"]
+        if r["duplicate_of"] is not None and not r["keeper_path"]:
+            out["falhas"].append((path, _("o original desta cópia não está no histórico")))
+            continue
+        if r["duplicate_of"] is not None and (r["keeper_marked"] or not os.path.exists(r["keeper_path"])):
+            # sempre sobra um exemplar: o original também está marcado ou não existe mais no disco
+            out["falhas"].append((path, _("o original desta cópia está marcado para excluir ou não foi encontrado")))
+            continue
         if not os.path.exists(path):
             if os.path.isdir(os.path.dirname(path)):
                 out["ausentes"] += 1  # a pasta existe e o arquivo sumiu: alguém já o apagou
