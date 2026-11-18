@@ -183,6 +183,15 @@ In the **Review** tab, under **Drive cleanup**:
    FotoFaxina generates a list (by album, with name and date) under **List to delete on
    Google…**. Delete them at photos.google.com and click **I deleted them on Google**.
 
+### Preview in Review
+
+When you select **one** item in the Review tab, the right-hand pane (resizable; hide it with
+**Preview beside the list**) shows the large image, or **plays the video** right there. If the item
+is a **copy** (or a better version than the one already uploaded), the pane shows **both files, one
+above the other**, with resolution, size, date and path of each: check before marking for deletion.
+**Open in the system program** opens the file in the default viewer or player. Video uses Qt
+Multimedia (`PySide6-Addons`); without it, use that button.
+
 ### Drive trash (read and restore)
 
 The **Drive trash** tab (Linux) reads the trash of external drives (`.Trash-UID`) and of your home

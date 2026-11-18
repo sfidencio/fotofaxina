@@ -186,6 +186,15 @@ Na aba **Revisão**, em **Limpeza do HD**:
    lá: o FotoFaxina gera uma lista (por álbum, com nome e data) em **Lista para apagar no
    Google…**. Apague em photos.google.com e clique em **Já apaguei no Google**.
 
+### Prévia na Revisão
+
+Ao selecionar **um** item na aba Revisão, o painel à direita (redimensionável; dá para esconder em
+**Prévia ao lado**) mostra a imagem grande, ou **toca o vídeo** ali mesmo. Se o item é uma **cópia**
+(ou uma versão melhor que a já enviada), o painel mostra **os dois arquivos, um sobre o outro**, com
+resolução, tamanho, data e caminho de cada um: confira antes de marcar para excluir. O botão
+**Abrir no programa do sistema** abre o arquivo no visualizador ou player padrão. O vídeo usa o Qt
+Multimedia (`PySide6-Addons`); sem ele, use esse botão.
+
 ### Lixeira do HD (ler e restaurar)
 
 A aba **Lixeira do HD** (Linux) lê a lixeira dos HDs externos (`.Trash-UID`) e a da sua pasta

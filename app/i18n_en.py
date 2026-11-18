@@ -589,4 +589,22 @@ EN: dict[str, str] = {
         'Opens the file (straight from the trash) in the default viewer or player.',
     '(vídeo: use “Abrir no programa do sistema”)':
         '(video: use “Open in the system program”)',
+    'Prévia ao lado':
+        'Preview beside the list',
+    'ESTA CÓPIA':
+        'THIS COPY',
+    'ORIGINAL (será mantido)':
+        'ORIGINAL (will be kept)',
+    'ESTA VERSÃO (melhor qualidade)':
+        'THIS VERSION (better quality)',
+    'VERSÃO JÁ ENVIADA (pior)':
+        'VERSION ALREADY UPLOADED (worse)',
+    'ARQUIVO':
+        'FILE',
+    'já no Google Fotos':
+        'already in Google Photos',
+    '(arquivo não encontrado: o HD está plugado?)':
+        '(file not found: is the drive plugged in?)',
+    'Abre o arquivo no visualizador ou player padrão.':
+        'Opens the file in the default viewer or player.',
 }

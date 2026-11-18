@@ -12,7 +12,7 @@ from PySide6.QtGui import QDesktopServices, QIcon, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox,
     QFileDialog, QFormLayout, QGroupBox, QHBoxLayout, QHeaderView, QInputDialog, QLabel, QLineEdit,
-    QListWidget, QListWidgetItem, QMenu, QMessageBox, QPlainTextEdit, QProgressBar, QProgressDialog, QPushButton, QSpinBox, QStyle,
+    QListWidget, QListWidgetItem, QMenu, QMessageBox, QSplitter, QPlainTextEdit, QProgressBar, QProgressDialog, QPushButton, QSpinBox, QStyle,
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -20,6 +20,7 @@ from .. import albums, autostart, classifier, cleanup, db, google_photos, pipeli
 from ..config import CATEGORIES, SOURCES, TOKEN_PATH, Config, resource, wants_upload
 from ..i18n import LANGUAGES, _, language
 from .icons import set_icon
+from .media_preview import MediaPreview, human
 from .workers import ThumbJob
 
 PAGE = 300
@@ -315,6 +316,10 @@ class RevisaoTab(QWidget):
         top.addWidget(QLabel(_("Situação:")))
         top.addWidget(self.sit_combo)
         top.addStretch()
+        self.chk_preview = QCheckBox(_("Prévia ao lado"))
+        self.chk_preview.setChecked(True)
+        self.chk_preview.toggled.connect(self._toggle_preview)
+        top.addWidget(self.chk_preview)
         top.addWidget(self.count_lbl)
 
         self.list = QListWidget()
@@ -326,6 +331,7 @@ class RevisaoTab(QWidget):
         self.list.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.list.setWordWrap(True)
         self.list.itemDoubleClicked.connect(self._open_file)
+        self.list.itemSelectionChanged.connect(self._preview_selected)
         self.list.setContextMenuPolicy(Qt.CustomContextMenu)
         self.list.customContextMenuRequested.connect(self._context_menu)
 
@@ -399,9 +405,21 @@ class RevisaoTab(QWidget):
         hint = QLabel(_("Dica: Ctrl/Shift para selecionar várias. Duplo clique abre o arquivo. "
                         "Botão direito mostra a pasta do original e da cópia."))
         hint.setStyleSheet("color: gray")
+        # prévia ao lado: o arquivo selecionado e, se for cópia/versão melhor, o outro para comparar
+        self.media_this, self.media_other = MediaPreview(), MediaPreview()
+        self.media_this.clear(_("Selecione um item para ver a prévia."))
+        self.media_other.hide()
+        self.side = QSplitter(Qt.Vertical)
+        self.side.addWidget(self.media_this)
+        self.side.addWidget(self.media_other)
+        self.splitter = QSplitter(Qt.Horizontal)
+        self.splitter.addWidget(self.list)
+        self.splitter.addWidget(self.side)
+        self.splitter.setStretchFactor(0, 3)
+        self.splitter.setStretchFactor(1, 2)
         lay = QVBoxLayout(self)
         lay.addLayout(top)
-        lay.addWidget(self.list, 1)
+        lay.addWidget(self.splitter, 1)
         lay.addLayout(bottom)
         lay.addLayout(clean)
         lay.addWidget(hint)
@@ -723,6 +741,54 @@ class RevisaoTab(QWidget):
         conn.close()
         self.reload()
         self.changed.emit()
+
+    def _toggle_preview(self, on: bool):
+        self.side.setVisible(on)
+        if not on:
+            self.media_this.stop()
+            self.media_other.stop()
+        else:
+            self._preview_selected()
+
+    def _caption(self, r, role: str) -> str:
+        dims = f"{r['width']}×{r['height']}" if r["width"] and r["height"] else "?"
+        sent = " · " + _("já no Google Fotos") if r["media_item_id"] else ""
+        return (f"{role}\n{dims} · {human(r['size'] or 0)} · {(r['taken_at'] or '')[:10]}{sent}\n{r['path']}")
+
+    def _preview_selected(self):
+        if not self.chk_preview.isChecked():
+            return
+        ids = self._selected_ids()
+        if len(ids) != 1:
+            self.media_this.clear(_("{n} item(ns) selecionado(s).").format(n=len(ids)) if ids
+                                  else _("Selecione um item para ver a prévia."))
+            self.media_other.clear()
+            self.media_other.hide()
+            return
+        conn = db.connect()
+        r = conn.execute("SELECT * FROM photos WHERE id=?", (ids[0],)).fetchone()
+        other = None
+        rel = None
+        if r is not None:
+            rel = r["duplicate_of"] if r["duplicate_of"] is not None else r["supersedes"]
+            if rel is not None:
+                other = conn.execute("SELECT * FROM photos WHERE id=?", (rel,)).fetchone()
+        conn.close()
+        if r is None:
+            return
+        if other is not None and r["duplicate_of"] is not None:
+            roles = (_("ESTA CÓPIA"), _("ORIGINAL (será mantido)"))
+        elif other is not None:
+            roles = (_("ESTA VERSÃO (melhor qualidade)"), _("VERSÃO JÁ ENVIADA (pior)"))
+        else:
+            roles = (_("ARQUIVO"), "")
+        self.media_this.set_file(r["path"], self._caption(r, roles[0]), is_video=bool(r["is_video"]))
+        if other is not None:
+            self.media_other.set_file(other["path"], self._caption(other, roles[1]), is_video=bool(other["is_video"]))
+            self.media_other.show()
+        else:
+            self.media_other.clear()
+            self.media_other.hide()
 
     def _context_menu(self, pos):
         it = self.list.itemAt(pos)

@@ -67,6 +67,8 @@ jobs:
         run: python tests/test_melhor_versao.py
       - name: Aba Lixeira do HD (ler e restaurar)
         run: python tests/test_lixeira.py
+      - name: Prévia na Revisão (imagem, vídeo, cópia x original)
+        run: python tests/test_previa_revisao.py
       - name: Fotos parecidas (sequência) não viram duplicata
         run: python tests/test_duplicatas_parecidas.py
       - name: Fotos do mesmo evento vão para o mesmo álbum
