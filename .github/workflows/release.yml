@@ -61,6 +61,8 @@ jobs:
         run: python tests/test_duplicata_original_apagado.py
       - name: Esquecer registros e caminhos repetidos
         run: python tests/test_esquecer.py
+      - name: Limpeza do HD (só o marcado vai para a lixeira)
+        run: python tests/test_exclusao.py
       - name: Fotos parecidas (sequência) não viram duplicata
         run: python tests/test_duplicatas_parecidas.py
       - name: Fotos do mesmo evento vão para o mesmo álbum

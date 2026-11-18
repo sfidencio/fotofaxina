@@ -7,3 +7,4 @@ google-auth>=2.29
 google-auth-oauthlib>=1.2
 requests>=2.31
 onnxruntime>=1.18
+send2trash>=1.8

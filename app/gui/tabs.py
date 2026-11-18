@@ -9,11 +9,11 @@ from PySide6.QtGui import QDesktopServices, QIcon, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox,
     QFileDialog, QFormLayout, QGroupBox, QHBoxLayout, QHeaderView, QInputDialog, QLabel, QLineEdit,
-    QListWidget, QListWidgetItem, QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QSpinBox, QStyle,
+    QListWidget, QListWidgetItem, QMessageBox, QPlainTextEdit, QProgressBar, QProgressDialog, QPushButton, QSpinBox, QStyle,
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
-from .. import albums, autostart, classifier, db, google_photos, pipeline
+from .. import albums, autostart, classifier, cleanup, db, google_photos, pipeline
 from ..config import CATEGORIES, SOURCES, TOKEN_PATH, Config, resource, wants_upload
 from ..i18n import LANGUAGES, _, language
 from .icons import set_icon
@@ -271,7 +271,8 @@ class RevisaoTab(QWidget):
         self.sit_combo = QComboBox()
         for label, key in ((_("Vão para o Google"), "upload"), (_("Não vão"), "skip"),
                            (_("Baixa confiança"), "low"), (_("Já enviadas"), "done"),
-                           (_("Com erro"), "error"), (_("Tudo"), "all")):
+                           (_("Com erro"), "error"), (_("Marcadas para excluir"), "delete"),
+                           (_("Tudo"), "all")):
             self.sit_combo.addItem(label, key)
         self.cat_combo.currentIndexChanged.connect(self.reload)
         self.sit_combo.currentIndexChanged.connect(self.reload)
@@ -317,13 +318,30 @@ class RevisaoTab(QWidget):
         btn_forget.setToolTip(_("Remove os itens do histórico do FotoFaxina (não apaga nenhum arquivo)."))
         btn_forget.clicked.connect(self._forget_selected)
         self.btn_forget = btn_forget
+        btn_mark = QPushButton(_("Marcar para excluir"))
+        btn_mark.setToolTip(_("Só memes, prints, figurinhas e documentos podem ser marcados. Nada é "
+                              "apagado até você usar “Excluir marcadas do HD…”."))
+        btn_mark.clicked.connect(lambda: self._mark_delete(True))
+        btn_unmark = QPushButton(_("Desmarcar"))
+        btn_unmark.clicked.connect(lambda: self._mark_delete(False))
+        self.btn_trash = QPushButton(_("Excluir marcadas do HD…"))
+        self.btn_trash.setToolTip(_("Manda para a lixeira do sistema só o que está marcado (dá para "
+                                    "restaurar de lá)."))
+        self.btn_trash.clicked.connect(self._trash_marked)
+        btn_glist = QPushButton(_("Lista para apagar no Google…"))
+        btn_glist.setToolTip(_("O que foi excluído do HD mas continua no Google Fotos (o Google não deixa "
+                               "aplicativos apagarem fotos)."))
+        btn_glist.clicked.connect(self._google_list)
+        self.clean_buttons = [btn_mark, btn_unmark, self.btn_trash, btn_glist]
         btn_send.clicked.connect(lambda: self._set_decision("upload"))
         btn_skip.clicked.connect(lambda: self._set_decision("skip"))
         btn_auto.clicked.connect(lambda: self._set_decision(None))
         btn_move.clicked.connect(self._move_category)
         for b, name, tone in ((btn_send, "check", "accent"), (btn_skip, "skip", None), (btn_auto, "auto", None),
                               (btn_move, "tag", None), (btn_notdup, "notdup", None),
-                              (btn_forget, "eraser", "danger"), (self.btn_more, "more", None)):
+                              (btn_forget, "eraser", "danger"), (self.btn_more, "more", None),
+                              (btn_mark, "skip", None), (btn_unmark, "auto", None),
+                              (self.btn_trash, "eraser", "danger"), (btn_glist, "album", None)):
             set_icon(b, name, tone)
 
         bottom = QHBoxLayout()
@@ -334,18 +352,28 @@ class RevisaoTab(QWidget):
         bottom.addWidget(btn_forget)
         bottom.addWidget(self.btn_more)
 
+        clean = QHBoxLayout()
+        clean.addWidget(QLabel(_("Limpeza do HD:")))
+        for w in (btn_mark, btn_unmark, self.btn_trash):
+            clean.addWidget(w)
+        clean.addStretch()
+        clean.addWidget(btn_glist)
+
         hint = QLabel(_("Dica: Ctrl/Shift para selecionar várias. Duplo clique abre o arquivo."))
         hint.setStyleSheet("color: gray")
         lay = QVBoxLayout(self)
         lay.addLayout(top)
         lay.addWidget(self.list, 1)
         lay.addLayout(bottom)
+        lay.addLayout(clean)
         lay.addWidget(hint)
 
         self.video_icon = self.style().standardIcon(QStyle.SP_MediaPlay)
         self.file_icon = self.style().standardIcon(QStyle.SP_FileIcon)
 
     def set_busy(self, busy: bool):
+        for b in self.clean_buttons:
+            b.setEnabled(not busy)
         self.btn_forget.setEnabled(not busy)
         self.btn_forget.setToolTip(_("Aguarde a tarefa atual terminar.") if busy else
                                    _("Remove os itens do histórico do FotoFaxina (não apaga nenhum arquivo)."))
@@ -355,6 +383,8 @@ class RevisaoTab(QWidget):
         sit = self.sit_combo.currentData()
         if sit == "all":
             return True
+        if sit == "delete":
+            return bool(r["delete_mark"])
         if sit == "done":
             return bool(r["media_item_id"])
         if sit == "error":
@@ -393,7 +423,9 @@ class RevisaoTab(QWidget):
         self._show_more()
 
     def _label(self, r) -> str:
-        if r["media_item_id"]:
+        if r["delete_mark"]:
+            mark = "🗑 "
+        elif r["media_item_id"]:
             mark = "✓ "
         elif r["duplicate_of"] is not None:
             mark = "≡ "
@@ -429,6 +461,9 @@ class RevisaoTab(QWidget):
                 tip.append(_("Câmera: {camera}").format(camera=r["camera"]))
             if r["error"]:
                 tip.append(_("Erro: {erro}").format(erro=r["error"]))
+            if r["delete_mark"]:
+                tip.append(_("Marcada para excluir do HD") + (" " + _("(continuará no Google Fotos)")
+                                                              if r["media_item_id"] else ""))
             if r["duplicate_of"] is not None and r["duplicate_of"] in self.originals:
                 orig, sent = self.originals[r["duplicate_of"]]
                 tip.append(_("Duplicata de: {arquivo}").format(arquivo=orig)
@@ -517,6 +552,96 @@ class RevisaoTab(QWidget):
                 "análise ou no próximo envio.").format(n=n))
         self.reload()
         self.changed.emit()
+
+    def _mark_delete(self, flag: bool):
+        ids = self._selected_ids()
+        if not ids:
+            return
+        conn = db.connect()
+        n = cleanup.mark(conn, ids, flag)
+        conn.close()
+        if flag and n < len(ids):
+            QMessageBox.information(self, _("Marcar para excluir"), _(
+                "{n} item(ns) marcados. {ign} ignorados: só memes, prints, figurinhas e documentos "
+                "podem ser marcados.").format(n=n, ign=len(ids) - n))
+        self.reload()
+        self.changed.emit()
+
+    def _trash_marked(self):
+        conn = db.connect()
+        pv = cleanup.preview(conn)
+        conn.close()
+        if not pv["n"]:
+            QMessageBox.information(self, _("Excluir marcadas"), _("Nenhum item marcado para excluir."))
+            return
+        text = _("Enviar {n} arquivo(s) ({mb:.1f} MB) para a lixeira?").format(n=pv["n"], mb=pv["bytes"] / 1048576)
+        text += "\n\n" + _("Dá para restaurá-los pela lixeira do sistema.")
+        if pv["no_google"]:
+            text += "\n\n" + _("{n} deles já estão no Google Fotos. O Google não deixa aplicativos apagarem "
+                                 "fotos: o FotoFaxina vai gerar uma lista para você apagar lá.").format(
+                n=pv["no_google"])
+        box = QMessageBox(QMessageBox.Warning, _("Excluir marcadas"), text, QMessageBox.Yes | QMessageBox.No, self)
+        box.setDefaultButton(QMessageBox.No)
+        if box.exec() != QMessageBox.Yes:
+            return
+        dlg = QProgressDialog(_("Enviando para a lixeira…"), _("Parar"), 0, pv["n"], self)
+        dlg.setWindowModality(Qt.WindowModal)
+        dlg.setMinimumDuration(0)
+
+        def progress(done, total, name):
+            dlg.setValue(done - 1)
+            dlg.setLabelText(name)
+            QApplication.processEvents()
+
+        conn = db.connect()
+        res = cleanup.trash_marked(conn, progress, stop=dlg.wasCanceled)
+        report = cleanup.write_report(conn) if res["no_google"] else None
+        conn.close()
+        dlg.close()
+        msg = _("{n} arquivo(s) enviados para a lixeira ({mb:.1f} MB).").format(
+            n=res["lixeira"], mb=res["bytes"] / 1048576)
+        if res["ausentes"]:
+            msg += "\n" + _("{n} já não existiam no HD.").format(n=res["ausentes"])
+        if res["nao_encontrados"]:
+            msg += "\n" + _("{n} não foram encontrados (o HD está plugado?). Continuam marcados.").format(
+                n=len(res["nao_encontrados"]))
+        if res["falhas"]:
+            msg += "\n" + _("{n} falharam e continuam marcados, por exemplo: {ex}").format(
+                n=len(res["falhas"]), ex=f"{res['falhas'][0][0]} ({res['falhas'][0][1]})")
+        if res["parado"]:
+            msg += "\n" + _("Parado: o restante continua marcado.")
+        self.reload()
+        self.changed.emit()
+        if report:
+            msg += "\n\n" + _("{n} já estavam no Google Fotos e continuam lá. Abrir a lista para apagá-los?").format(
+                n=res["no_google"])
+            if QMessageBox.question(self, _("Excluir marcadas"), msg) == QMessageBox.Yes:
+                QDesktopServices.openUrl(QUrl.fromLocalFile(str(report)))
+        else:
+            QMessageBox.information(self, _("Excluir marcadas"), msg)
+
+    def _google_list(self):
+        conn = db.connect()
+        report = cleanup.write_report(conn)
+        n = len(cleanup.google_pending(conn))
+        conn.close()
+        if not report:
+            QMessageBox.information(self, _("Lista para apagar no Google"),
+                                    _("Nada pendente: não há itens excluídos do HD que ainda estejam no Google Fotos."))
+            return
+        box = QMessageBox(QMessageBox.Question, _("Lista para apagar no Google"), _(
+            "{n} item(ns) excluídos do HD ainda estão no Google Fotos. Abra a lista, apague-os em "
+            "photos.google.com e depois clique em “Já apaguei”.").format(n=n), parent=self)
+        b_open = box.addButton(_("Abrir a lista"), QMessageBox.AcceptRole)
+        b_done = box.addButton(_("Já apaguei no Google"), QMessageBox.DestructiveRole)
+        box.addButton(_("Fechar"), QMessageBox.RejectRole)
+        box.exec()
+        if box.clickedButton() is b_open:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(report)))
+        elif box.clickedButton() is b_done:
+            conn = db.connect()
+            cleanup.clear_google_pending(conn)
+            conn.close()
 
     def _forget_selected(self):
         ids = self._selected_ids()

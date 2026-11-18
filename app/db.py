@@ -32,7 +32,8 @@ CREATE TABLE IF NOT EXISTS photos(
     media_item_id TEXT,
     error         TEXT,
     not_duplicate INTEGER DEFAULT 0, -- usuário disse "Não é duplicata": não comparar por semelhança
-    album_pin     TEXT               -- álbum escolhido pelo usuário (vale mais que o agrupamento)
+    album_pin     TEXT,              -- álbum escolhido pelo usuário (vale mais que o agrupamento)
+    delete_mark   INTEGER DEFAULT 0  -- usuário marcou para excluir do HD (só meme/print/documento)
 );
 CREATE INDEX IF NOT EXISTS idx_photos_sha    ON photos(sha256);
 CREATE INDEX IF NOT EXISTS idx_photos_phash  ON photos(phash);
@@ -52,12 +53,26 @@ CREATE TABLE IF NOT EXISTS albums(
     google_items   INTEGER           -- quantos itens o álbum tem no Google (última busca)
 );
 
+-- itens excluídos do HD que já estavam no Google Fotos: o app não consegue apagá-los de lá (a API
+-- do Google não tem essa função), então guardamos a lista para o usuário apagar manualmente
+CREATE TABLE IF NOT EXISTS google_cleanup(
+    id            INTEGER PRIMARY KEY,
+    name          TEXT,
+    taken_at      TEXT,
+    width         INTEGER,
+    height        INTEGER,
+    category      TEXT,
+    album_title   TEXT,
+    media_item_id TEXT,
+    trashed_at    TEXT
+);
+
 -- álbuns esvaziados ao juntar: a busca no Google não os traz de volta para a lista
 CREATE TABLE IF NOT EXISTS ignored_albums(google_id TEXT PRIMARY KEY);
 """
 
 
-SCHEMA_VERSION = 4  # suba ao mudar o esquema; a migração roda uma vez por banco
+SCHEMA_VERSION = 5  # suba ao mudar o esquema; a migração roda uma vez por banco
 _ready: set[str] = set()
 
 
@@ -89,6 +104,8 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE photos ADD COLUMN not_duplicate INTEGER DEFAULT 0")
     if "album_pin" not in pcols:
         conn.execute("ALTER TABLE photos ADD COLUMN album_pin TEXT")
+    if "delete_mark" not in pcols:
+        conn.execute("ALTER TABLE photos ADD COLUMN delete_mark INTEGER DEFAULT 0")
     acols = {r["name"] for r in conn.execute("PRAGMA table_info(albums)")}
     if "google_items" not in acols:
         conn.execute("ALTER TABLE albums ADD COLUMN google_items INTEGER")
@@ -205,11 +222,12 @@ def summary(conn: sqlite3.Connection, cfg) -> dict:
 
     groups = conn.execute(
         "SELECT duplicate_of IS NOT NULL AS dup, status, category, decision, source, "
-        "media_item_id IS NOT NULL AS sent, COUNT(*) AS n FROM photos GROUP BY 1, 2, 3, 4, 5, 6"
+        "media_item_id IS NOT NULL AS sent, COALESCE(delete_mark, 0) AS marked, COUNT(*) AS n "
+        "FROM photos GROUP BY 1, 2, 3, 4, 5, 6, 7"
     ).fetchall()
     out = {
         "total": 0, "duplicadas": 0, "enviadas": 0, "a_enviar": 0,
-        "erros": 0, "pendentes": 0, "por_categoria": {},
+        "erros": 0, "pendentes": 0, "por_categoria": {}, "a_excluir": 0,
     }
     for g in groups:
         n = g["n"]
@@ -221,7 +239,10 @@ def summary(conn: sqlite3.Connection, cfg) -> dict:
             out["pendentes"] += n
         if g["category"]:
             out["por_categoria"][g["category"]] = out["por_categoria"].get(g["category"], 0) + n
-        row = {"duplicate_of": None, "decision": g["decision"], "source": g["source"], "category": g["category"]}
+        if g["marked"]:
+            out["a_excluir"] += n
+        row = {"duplicate_of": None, "decision": g["decision"], "source": g["source"],
+               "category": g["category"], "delete_mark": g["marked"]}
         if g["sent"]:
             out["enviadas"] += n
         elif g["status"] == "error":

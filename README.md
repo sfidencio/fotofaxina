@@ -48,9 +48,10 @@ Para remover: apague a pasta extraída (e, se quiser, a pasta `.fotofaxina` com 
 ## Como funciona
 
 > 🔒 **Seus arquivos ficam intactos.** O FotoFaxina só **lê** o HD: nunca apaga, move, renomeia
-> ou altera nenhum arquivo de origem — nem as duplicatas, nem os memes. Tudo o que ele grava
-> (banco, miniaturas, configurações) fica na pasta de dados dele (`~/.fotofaxina`). Um teste
-> automático confere isso a cada versão (`tests/test_origem_intocada.py`).
+> ou altera nenhum arquivo de origem — nem as duplicatas, nem os memes. A **única** exceção é a
+> limpeza que **você** pede, item por item (veja [Limpar memes, prints e documentos do HD](#limpar-memes-prints-e-documentos-do-hd)).
+> Tudo o que ele grava (banco, miniaturas, configurações) fica na pasta de dados dele
+> (`~/.fotofaxina`). Um teste automático confere isso a cada versão (`tests/test_origem_intocada.py`).
 
 1. **Escolha a pasta ou o HD** e clique em **Analisar**. (Para analisar sozinho ao plugar o HD,
    ligue em Configurações → *Analisar automaticamente quando um HD for plugado*; vem desligado.)
@@ -166,6 +167,20 @@ Para que ninguém fique dependente da sua conta, configure também no Google (um
   recebem o link para baixar suas fotos se a conta ficar inativa pelo prazo que você escolher.
 - **Compartilhamento com parceiro** no app Google Fotos: a outra pessoa recebe tudo
   automaticamente e pode salvar uma cópia na conta dela.
+
+## Limpar memes, prints e documentos do HD
+
+Na aba **Revisão**, em **Limpeza do HD**:
+
+1. Selecione os itens (dica: filtre por categoria) e clique em **Marcar para excluir**. Só
+   memes/figurinhas, prints e documentos podem ser marcados; fotos, paisagens e vídeos, nunca.
+   Marcar não apaga nada, e o item marcado deixa de ser enviado ao Google Fotos.
+2. **Excluir marcadas do HD…** mostra quantos arquivos e quantos MB, e pede confirmação. Só o que
+   está marcado vai para a **lixeira do sistema** (dá para restaurar de lá). Nada é apagado de vez.
+   Se algo falhar ou o HD não estiver plugado, o item continua marcado.
+3. **O Google Fotos não deixa aplicativos apagarem fotos.** O que já tinha sido enviado continua
+   lá: o FotoFaxina gera uma lista (por álbum, com nome e data) em **Lista para apagar no
+   Google…**. Apague em photos.google.com e clique em **Já apaguei no Google**.
 
 ## Histórico (esquecer registros)
 

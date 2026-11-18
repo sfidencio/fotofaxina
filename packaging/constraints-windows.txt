@@ -33,6 +33,7 @@ pyside6-webengine==6.12.0.140
 pywin32-ctypes==0.2.3
 requests==2.34.2
 requests-oauthlib==2.0.0
+send2trash==1.8.3
 setuptools==84.2.1
 shiboken6==6.12.0
 urllib3==2.8.0

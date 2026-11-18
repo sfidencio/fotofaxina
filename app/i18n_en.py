@@ -383,4 +383,78 @@ EN: dict[str, str] = {
         'Uploads only the pending photos of the selected albums (e.g. “Photos 2023”).',
     '<h3>Bem-vindo ao FotoFaxina!</h3><p>1. Conecte sua conta do Google Fotos.<br>2. Escolha a pasta ou o HD e clique em <b>Analisar</b>.<br>3. Confira o resultado e clique em <b>Enviar para o Google Fotos</b>.</p><p>O programa fica perto do relógio do Windows. Para analisar sozinho ao plugar o HD, ligue a opção em Configurações.</p>':
         '<h3>Welcome to FotoFaxina!</h3><p>1. Connect your Google Photos account.<br>2. Choose the folder or drive and click <b>Analyze</b>.<br>3. Review the result and click <b>Upload to Google Photos</b>.</p><p>The app stays next to the Windows clock. To analyze automatically when a drive is plugged in, turn it on in Settings.</p>',
+
+    # limpeza do HD (lixeira)
+    'Itens que o FotoFaxina excluiu do HD mas que continuam no Google Fotos.':
+        'Items FotoFaxina deleted from the drive that are still in Google Photos.',
+    'O Google não deixa aplicativos apagarem fotos: apague-os você, em photos.google.com.':
+        'Google does not let apps delete photos: delete them yourself at photos.google.com.',
+    'Dica: abra o álbum, selecione os itens da lista (pela data) e use a lixeira.':
+        'Tip: open the album, select the items on the list (by date) and use the trash.',
+    'Álbum: {album} — {n} item(ns)':
+        'Album: {album} — {n} item(s)',
+    'o arquivo mudou depois da análise':
+        'the file changed after the analysis',
+    '(sem álbum)':
+        '(no album)',
+    'Marcar para excluir':
+        'Mark for deletion',
+    'Só memes, prints, figurinhas e documentos podem ser marcados. Nada é apagado até você usar “Excluir marcadas do HD…”.':
+        'Only memes, screenshots, stickers and documents can be marked. Nothing is deleted until you use “Delete marked from drive…”.',
+    'Desmarcar':
+        'Unmark',
+    'Excluir marcadas do HD…':
+        'Delete marked from drive…',
+    'Manda para a lixeira do sistema só o que está marcado (dá para restaurar de lá).':
+        'Sends only what is marked to the system trash (you can restore it from there).',
+    'Lista para apagar no Google…':
+        'List to delete on Google…',
+    'O que foi excluído do HD mas continua no Google Fotos (o Google não deixa aplicativos apagarem fotos).':
+        'What was deleted from the drive but is still in Google Photos (Google does not let apps delete photos).',
+    'Dá para restaurá-los pela lixeira do sistema.':
+        'You can restore them from the system trash.',
+    'Excluir marcadas':
+        'Delete marked',
+    'Enviando para a lixeira…':
+        'Sending to the trash…',
+    'Lista para apagar no Google':
+        'List to delete on Google',
+    'Abrir a lista':
+        'Open the list',
+    'Já apaguei no Google':
+        'I deleted them on Google',
+    'Fechar':
+        'Close',
+    'Marcadas para excluir':
+        'Marked for deletion',
+    'Limpeza do HD:':
+        'Drive cleanup:',
+    'Nenhum item marcado para excluir.':
+        'No items marked for deletion.',
+    'Enviar {n} arquivo(s) ({mb:.1f} MB) para a lixeira?':
+        'Send {n} file(s) ({mb:.1f} MB) to the trash?',
+    '{n} arquivo(s) enviados para a lixeira ({mb:.1f} MB).':
+        '{n} file(s) sent to the trash ({mb:.1f} MB).',
+    'Parado: o restante continua marcado.':
+        'Stopped: the rest stays marked.',
+    'Nada pendente: não há itens excluídos do HD que ainda estejam no Google Fotos.':
+        'Nothing pending: no items deleted from the drive are still in Google Photos.',
+    '{n} item(ns) excluídos do HD ainda estão no Google Fotos. Abra a lista, apague-os em photos.google.com e depois clique em “Já apaguei”.':
+        '{n} item(s) deleted from the drive are still in Google Photos. Open the list, delete them at photos.google.com and then click “I deleted them on Google”.',
+    'Marcada para excluir do HD':
+        'Marked for deletion from the drive',
+    '{n} item(ns) marcados. {ign} ignorados: só memes, prints, figurinhas e documentos podem ser marcados.':
+        '{n} item(s) marked. {ign} ignored: only memes, screenshots, stickers and documents can be marked.',
+    '{n} deles já estão no Google Fotos. O Google não deixa aplicativos apagarem fotos: o FotoFaxina vai gerar uma lista para você apagar lá.':
+        '{n} of them are already in Google Photos. Google does not let apps delete photos: FotoFaxina will generate a list for you to delete them there.',
+    '{n} já não existiam no HD.':
+        '{n} no longer existed on the drive.',
+    '{n} não foram encontrados (o HD está plugado?). Continuam marcados.':
+        '{n} were not found (is the drive plugged in?). They stay marked.',
+    '{n} falharam e continuam marcados, por exemplo: {ex}':
+        '{n} failed and stay marked, for example: {ex}',
+    '{n} já estavam no Google Fotos e continuam lá. Abrir a lista para apagá-los?':
+        '{n} were already in Google Photos and are still there. Open the list to delete them?',
+    '(continuará no Google Fotos)':
+        '(will remain in Google Photos)',
 }

@@ -99,6 +99,8 @@ def wants_upload(row, cfg: Config) -> bool:
     """Decide se uma foto (linha do banco) deve ir para o Google Fotos."""
     if row["duplicate_of"] is not None:
         return False
+    if "delete_mark" in row.keys() and row["delete_mark"]:
+        return False  # marcada para excluir do HD: não faz sentido enviar
     decision = row["decision"]
     if decision == "upload":
         return True

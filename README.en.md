@@ -49,9 +49,10 @@ To remove it: delete the extracted folder (and, if you want, the `.fotofaxina` h
 ## How it works
 
 > 🔒 **Your files stay untouched.** FotoFaxina only **reads** the drive: it never deletes, moves,
-> renames or modifies any source file — not even duplicates or memes. Everything it writes
-> (database, thumbnails, settings) goes to its own data folder (`~/.fotofaxina`). An automated
-> test checks this on every release (`tests/test_origem_intocada.py`).
+> renames or modifies any source file — not even duplicates or memes. The **only** exception is
+> the cleanup that **you** ask for, item by item (see [Cleaning memes, screenshots and documents off the drive](#cleaning-memes-screenshots-and-documents-off-the-drive)).
+> Everything it writes (database, thumbnails, settings) goes to its own data folder
+> (`~/.fotofaxina`). An automated test checks this on every release (`tests/test_origem_intocada.py`).
 
 1. **Choose the folder or drive** and click **Analyze**. (To analyze automatically when a drive is
    plugged in, turn on Settings → *Analyze automatically when a drive is plugged in*; it is off by default.)
@@ -163,6 +164,20 @@ So nobody depends on your account, also set up in Google (one time):
   link to download your photos if the account stays inactive for the period you choose.
 - **Partner sharing** in the Google Photos app: the other person receives everything
   automatically and can save a copy to their own account.
+
+## Cleaning memes, screenshots and documents off the drive
+
+In the **Review** tab, under **Drive cleanup**:
+
+1. Select the items (tip: filter by category) and click **Mark for deletion**. Only memes/stickers,
+   screenshots and documents can be marked; photos, landscapes and videos never can. Marking
+   deletes nothing, and a marked item is no longer uploaded to Google Photos.
+2. **Delete marked from drive…** shows how many files and MB, and asks for confirmation. Only what
+   is marked goes to the **system trash** (you can restore it from there). Nothing is permanently
+   deleted. If something fails or the drive is unplugged, the item stays marked.
+3. **Google Photos does not let apps delete photos.** Whatever was already uploaded stays there:
+   FotoFaxina generates a list (by album, with name and date) under **List to delete on
+   Google…**. Delete them at photos.google.com and click **I deleted them on Google**.
 
 ## History (forgetting records)
 
