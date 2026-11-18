@@ -71,7 +71,8 @@ def duplicatas():
     assert len(copias) == 2
 
     assert cleanup.mark_identical_duplicates(conn) == 2
-    assert cleanup.mark(conn, [keeper["id"]]) == 0  # o original (foto) não pode ser marcado
+    assert cleanup.mark(conn, [keeper["id"]]) == 1  # o original também pode ser marcado...
+    cleanup.mark(conn, [keeper["id"]], False)
     res = cleanup.trash_marked(conn, trasher=lixeira_falsa)
     assert res["lixeira"] == 2 and not res["falhas"], res
     assert os.path.exists(keeper["path"]) and not any(os.path.exists(c["path"]) for c in copias)
@@ -125,16 +126,10 @@ def main():
     conn.commit()
     assert pipeline.enviar(cfg)["enviados_agora"] == 5  # 3 fotos + 2 prints
 
-    # fotos pessoais não podem ser marcadas; prints podem
-    assert cleanup.mark(conn, fotos) == 0
-    # "outro" pode; paisagem e vídeo não
-    for cat, esperado in (("outro", 1), ("paisagem", 0), ("video", 0)):
-        conn.execute("UPDATE photos SET category=? WHERE id=?", (cat, fotos[0]))
-        conn.commit()
-        assert cleanup.mark(conn, fotos[:1]) == esperado, cat
-        cleanup.mark(conn, fotos[:1], False)
-    conn.execute("UPDATE photos SET category='foto' WHERE id=?", (fotos[0],))
-    conn.commit()
+    # qualquer categoria pode ser marcada (a trava é a confirmação + lixeira)
+    assert cleanup.mark(conn, fotos[:1]) == 1
+    assert cleanup.preview(conn)["pessoais"] == 1  # a foto pessoal gera aviso extra na confirmação
+    assert cleanup.mark(conn, fotos[:1], False) == 1
     assert cleanup.mark(conn, prints[:3]) == 3  # prints 0 e 1 (já enviados) e 2 (só no HD); o 3 não
     assert cleanup.mark(conn, [prints[1]], False) == 1  # desmarcar
     assert cleanup.mark(conn, [prints[1]]) == 1
@@ -143,13 +138,6 @@ def main():
 
     # marcada para excluir não é enviada, mesmo sem ter sido enviada antes
     assert db.summary(conn, cfg)["a_excluir"] == 3
-
-    # a categoria mudou depois de marcar: não pode apagar
-    conn.execute("UPDATE photos SET category='foto' WHERE id=?", (prints[2],))
-    conn.commit()
-    assert cleanup.preview(conn)["n"] == 2
-    conn.execute("UPDATE photos SET category='print' WHERE id=?", (prints[2],))
-    conn.commit()
 
     # uma falha na lixeira mantém a marca e o registro
     def falha(path):

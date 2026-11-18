@@ -171,8 +171,8 @@ So nobody depends on your account, also set up in Google (one time):
 
 In the **Review** tab, under **Drive cleanup**:
 
-1. Select the items (tip: filter by category) and click **Mark for deletion**. Only memes/stickers,
-   screenshots, documents, **“Other”** and **copies (duplicates)** can be marked; photos, landscapes and videos never can.
+1. Select the items (tip: filter by category) and click **Mark for deletion**.
+   **Any category** can be marked (memes, screenshots, documents, “Other”, copies, and also photos, landscapes and videos; in those cases the confirmation shows an extra warning).
    **Mark all identical copies** marks every copy identical to its original at once. The original is never deleted: if it is also marked or no longer on disk, the copy stays. Marking
    deletes nothing, and a marked item is no longer uploaded to Google Photos.
    To double-check first, **right-click** an item: **Show the ORIGINAL’s folder** and **Show this COPY’s folder** open the file manager with the file selected.

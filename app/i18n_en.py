@@ -401,8 +401,6 @@ EN: dict[str, str] = {
         '(no album)',
     'Marcar para excluir':
         'Mark for deletion',
-    'Só memes, prints, figurinhas, documentos, “Outro” e cópias (duplicatas) podem ser marcados. Nada é apagado até você usar “Excluir marcadas do HD…”.':
-        'Only memes, screenshots, stickers, documents, “Other” and copies (duplicates) can be marked. Nothing is deleted until you use “Delete marked from drive…”.',
     'Desmarcar':
         'Unmark',
     'Excluir marcadas do HD…':
@@ -445,8 +443,6 @@ EN: dict[str, str] = {
         '{n} item(s) deleted from the drive are still in Google Photos. Open the list, delete them at photos.google.com and then click “I deleted them on Google”.',
     'Marcada para excluir do HD':
         'Marked for deletion from the drive',
-    '{n} item(ns) marcados. {ign} ignorados: só memes, prints, figurinhas, documentos, “Outro” e cópias (duplicatas) podem ser marcados.':
-        '{n} item(s) marked. {ign} ignored: only memes, screenshots, stickers, documents, “Other” and copies (duplicates) can be marked.',
     '{n} deles já estão no Google Fotos. O Google não deixa aplicativos apagarem fotos: o FotoFaxina vai gerar uma lista para você apagar lá.':
         '{n} of them are already in Google Photos. Google does not let apps delete photos: FotoFaxina will generate a list for you to delete them there.',
     '{n} já não existiam no HD.':
@@ -497,4 +493,8 @@ EN: dict[str, str] = {
         '(not found: is the drive plugged in?)',
     'Última origem lembrada: {caminho}':
         'Last source remembered: {caminho}',
+    'Marque o que quiser excluir, de qualquer categoria. Nada é apagado até você usar “Excluir marcadas do HD…”.':
+        'Mark whatever you want to delete, from any category. Nothing is deleted until you use “Delete marked from drive…”.',
+    'ATENÇÃO: {n} deles são fotos pessoais, paisagens ou vídeos. Confira antes de confirmar.':
+        'WARNING: {n} of them are personal photos, landscapes or videos. Check before confirming.',
 }

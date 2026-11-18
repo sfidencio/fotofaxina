@@ -174,8 +174,8 @@ Para que ninguém fique dependente da sua conta, configure também no Google (um
 
 Na aba **Revisão**, em **Limpeza do HD**:
 
-1. Selecione os itens (dica: filtre por categoria) e clique em **Marcar para excluir**. Só
-   memes/figurinhas, prints, documentos, **“Outro”** e **cópias (duplicatas)** podem ser marcados; fotos, paisagens e vídeos, nunca.
+1. Selecione os itens (dica: filtre por categoria) e clique em **Marcar para excluir**.
+   **Qualquer categoria** pode ser marcada (memes, prints, documentos, “Outro”, cópias, e também fotos, paisagens e vídeos; nesses casos a confirmação traz um aviso extra).
    **Marcar todas as cópias idênticas** marca de uma vez as cópias iguais ao original. O original nunca é excluído: se ele também estiver marcado ou não existir mais no disco, a cópia fica.
    Marcar não apaga nada, e o item marcado deixa de ser enviado ao Google Fotos.
    Para conferir antes, clique com o **botão direito** num item: **Mostrar a pasta do ORIGINAL** e **Mostrar a pasta desta CÓPIA** abrem o gerenciador de arquivos com o arquivo selecionado.

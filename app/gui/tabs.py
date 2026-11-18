@@ -351,8 +351,8 @@ class RevisaoTab(QWidget):
         btn_forget.clicked.connect(self._forget_selected)
         self.btn_forget = btn_forget
         btn_mark = QPushButton(_("Marcar para excluir"))
-        btn_mark.setToolTip(_("Só memes, prints, figurinhas, documentos, “Outro” e cópias (duplicatas) podem ser marcados. Nada é "
-                              "apagado até você usar “Excluir marcadas do HD…”."))
+        btn_mark.setToolTip(_("Marque o que quiser excluir, de qualquer categoria. Nada é apagado "
+                              "até você usar “Excluir marcadas do HD…”."))
         btn_mark.clicked.connect(lambda: self._mark_delete(True))
         btn_unmark = QPushButton(_("Desmarcar"))
         btn_unmark.clicked.connect(lambda: self._mark_delete(False))
@@ -602,10 +602,6 @@ class RevisaoTab(QWidget):
         conn = db.connect()
         n = cleanup.mark(conn, ids, flag)
         conn.close()
-        if flag and n < len(ids):
-            QMessageBox.information(self, _("Marcar para excluir"), _(
-                "{n} item(ns) marcados. {ign} ignorados: só memes, prints, figurinhas, documentos, “Outro” e "
-                "cópias (duplicatas) podem ser marcados.").format(n=n, ign=len(ids) - n))
         self.reload()
         self.changed.emit()
 
@@ -632,6 +628,9 @@ class RevisaoTab(QWidget):
             return
         text = _("Enviar {n} arquivo(s) ({mb:.1f} MB) para a lixeira?").format(n=pv["n"], mb=pv["bytes"] / 1048576)
         text += "\n\n" + _("Dá para restaurá-los pela lixeira do sistema.")
+        if pv["pessoais"]:
+            text += "\n\n" + _("ATENÇÃO: {n} deles são fotos pessoais, paisagens ou vídeos. Confira antes de "
+                                 "confirmar.").format(n=pv["pessoais"])
         if pv["no_google"]:
             text += "\n\n" + _("{n} deles já estão no Google Fotos. O Google não deixa aplicativos apagarem "
                                  "fotos: o FotoFaxina vai gerar uma lista para você apagar lá.").format(

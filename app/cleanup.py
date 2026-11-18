@@ -1,4 +1,4 @@
-"""Limpeza do HD: o usuário marca memes, prints, figurinhas, documentos e "outro" e o app manda só o que foi
+"""Limpeza do HD: o usuário marca o que quer excluir (qualquer categoria) e o app manda só o que foi
 marcado para a LIXEIRA do sistema (dá para restaurar de lá). Nada é apagado de vez.
 
 O que já foi enviado ao Google Fotos NÃO pode ser apagado pelo app: a API do Google não tem essa
@@ -17,9 +17,8 @@ from . import db
 from .config import APP_DIR, CATEGORIES
 from .i18n import _
 
-DELETABLE = ("meme", "print", "documento", "outro")  # nunca fotos pessoais, paisagens ou vídeos
+PERSONAL = ("foto", "paisagem", "video")  # qualquer categoria pode ser marcada; estas pedem aviso extra
 REPORT_PATH = APP_DIR / "apagar-no-google.txt"
-_MARKS = ",".join("?" * len(DELETABLE))
 
 
 def _gio() -> str | None:
@@ -53,14 +52,12 @@ def trash_error() -> str | None:
 
 
 def mark(conn, ids: list[int], flag: bool = True) -> int:
-    """Marca (ou desmarca) para excluir. Só aceita as categorias de DELETABLE.
+    """Marca (ou desmarca) para excluir. Qualquer categoria; nada é apagado até "Excluir marcadas".
     Retorna quantos itens mudaram."""
     n = 0
     for i in ids:
-        if flag:  # cópias (duplicatas) também podem; o original é protegido na hora de excluir
-            n += conn.execute(f"UPDATE photos SET delete_mark=1 WHERE id=? AND "
-                              f"(category IN ({_MARKS}) OR duplicate_of IS NOT NULL)",
-                              (i, *DELETABLE)).rowcount
+        if flag:  # qualquer categoria; o original de uma cópia é protegido na hora de excluir
+            n += conn.execute("UPDATE photos SET delete_mark=1 WHERE id=?", (i,)).rowcount
         else:
             n += conn.execute("UPDATE photos SET delete_mark=0 WHERE id=? AND delete_mark=1", (i,)).rowcount
     conn.commit()
@@ -78,19 +75,17 @@ def mark_identical_duplicates(conn) -> int:
 
 
 def _marked(conn) -> list:
-    # a categoria é conferida de novo aqui: mudar a categoria depois de marcar não pode apagar uma foto
     return conn.execute(
-        f"SELECT p.*, a.title AS album_title, k.path AS keeper_path, CASE WHEN k.delete_mark=1 AND (k.category IN ({_MARKS}) OR k.duplicate_of IS NOT NULL) "
-        "THEN 1 ELSE 0 END AS keeper_marked "
+        "SELECT p.*, a.title AS album_title, k.path AS keeper_path, COALESCE(k.delete_mark, 0) AS keeper_marked "
         "FROM photos p LEFT JOIN albums a ON a.key = p.album_key LEFT JOIN photos k ON k.id = p.duplicate_of "
-        f"WHERE p.delete_mark=1 AND (p.category IN ({_MARKS}) OR p.duplicate_of IS NOT NULL) "
-        "ORDER BY p.id", (*DELETABLE, *DELETABLE)).fetchall()
+        "WHERE p.delete_mark=1 ORDER BY p.id").fetchall()
 
 
 def preview(conn) -> dict:
     rows = _marked(conn)
     return {"n": len(rows), "bytes": sum(r["size"] or 0 for r in rows),
-            "no_google": sum(1 for r in rows if r["media_item_id"])}
+            "no_google": sum(1 for r in rows if r["media_item_id"]),
+            "pessoais": sum(1 for r in rows if r["category"] in PERSONAL and r["duplicate_of"] is None)}
 
 
 def trash_marked(conn, progress=None, stop=None, trasher=None) -> dict:
