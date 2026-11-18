@@ -186,6 +186,15 @@ Na aba **Revisão**, em **Limpeza do HD**:
    lá: o FotoFaxina gera uma lista (por álbum, com nome e data) em **Lista para apagar no
    Google…**. Apague em photos.google.com e clique em **Já apaguei no Google**.
 
+### Versão melhor que a já enviada
+
+Se o Google Fotos já tem uma versão **pior** de uma foto (ex.: a reduzida pelo WhatsApp) e o HD tem
+o original bom, o original **não é tratado como cópia**: ele aparece na Revisão com ⬆ (filtro
+**Melhor que a enviada**), é enviado normalmente e a versão pior entra em **Lista para apagar no
+Google…** (só depois que a melhor foi enviada). Isso vale para fotos com mesma proporção e bem
+mais pixels (≥ 1,5×) ou bem mais bytes. Uma cópia assim também **nunca** é excluída pelo
+“Excluir marcadas”.
+
 ## Histórico (esquecer registros)
 
 O FotoFaxina lembra o que já analisou e enviou para não repetir. Para refazer algo:

@@ -301,7 +301,8 @@ class RevisaoTab(QWidget):
         self.sit_combo = QComboBox()
         for label, key in ((_("Vão para o Google"), "upload"), (_("Não vão"), "skip"),
                            (_("Baixa confiança"), "low"), (_("Já enviadas"), "done"),
-                           (_("Com erro"), "error"), (_("Marcadas para excluir"), "delete"),
+                           (_("Com erro"), "error"), (_("Melhor que a enviada"), "better"),
+                           (_("Marcadas para excluir"), "delete"),
                            (_("Tudo"), "all")):
             self.sit_combo.addItem(label, key)
         self.cat_combo.currentIndexChanged.connect(self.reload)
@@ -422,6 +423,8 @@ class RevisaoTab(QWidget):
             return True
         if sit == "delete":
             return bool(r["delete_mark"])
+        if sit == "better":
+            return r["supersedes"] is not None
         if sit == "done":
             return bool(r["media_item_id"])
         if sit == "error":
@@ -464,6 +467,8 @@ class RevisaoTab(QWidget):
             mark = "🗑 "
         elif r["media_item_id"]:
             mark = "✓ "
+        elif r["supersedes"] is not None:
+            mark = "⬆ "
         elif r["duplicate_of"] is not None:
             mark = "≡ "
         elif wants_upload(r, self.cfg):
@@ -481,8 +486,8 @@ class RevisaoTab(QWidget):
     def _show_more(self):
         chunk = self.rows[self.shown:self.shown + PAGE]
         # originais só das duplicatas desta página (em vez de carregar o banco inteiro)
-        wanted = [r["duplicate_of"] for r in chunk
-                  if r["duplicate_of"] is not None and r["duplicate_of"] not in self.originals]
+        wanted = [x for r in chunk for x in (r["duplicate_of"], r["supersedes"])
+                  if x is not None and x not in self.originals]
         if wanted:
             conn = db.connect()
             for i in range(0, len(wanted), 500):
@@ -502,6 +507,10 @@ class RevisaoTab(QWidget):
                 tip.append(_("Câmera: {camera}").format(camera=r["camera"]))
             if r["error"]:
                 tip.append(_("Erro: {erro}").format(erro=r["error"]))
+            if r["supersedes"] is not None and r["supersedes"] in self.originals:
+                tip.append(_("Qualidade MELHOR que a versão já enviada ao Google: {arquivo}").format(
+                    arquivo=self.originals[r["supersedes"]][0]))
+                tip.append(_("Esta será enviada; depois apague a versão pior no Google (veja a lista)."))
             if r["delete_mark"]:
                 tip.append(_("Marcada para excluir do HD") + (" " + _("(continuará no Google Fotos)")
                                                               if r["media_item_id"] else ""))
@@ -678,15 +687,16 @@ class RevisaoTab(QWidget):
     def _google_list(self):
         conn = db.connect()
         report = cleanup.write_report(conn)
-        n = len(cleanup.google_pending(conn))
+        n = len(cleanup.google_pending(conn)) + len(cleanup.worse_sent(conn))
         conn.close()
         if not report:
             QMessageBox.information(self, _("Lista para apagar no Google"),
-                                    _("Nada pendente: não há itens excluídos do HD que ainda estejam no Google Fotos."))
+                                    _("Nada pendente: não há itens para apagar no Google Fotos."))
             return
         box = QMessageBox(QMessageBox.Question, _("Lista para apagar no Google"), _(
-            "{n} item(ns) excluídos do HD ainda estão no Google Fotos. Abra a lista, apague-os em "
-            "photos.google.com e depois clique em “Já apaguei”.").format(n=n), parent=self)
+            "{n} item(ns) para apagar no Google Fotos (excluídos do HD ou versões de qualidade pior, cuja "
+            "versão melhor já foi enviada). Abra a lista, apague-os em photos.google.com e depois "
+            "clique em “Já apaguei”.").format(n=n), parent=self)
         b_open = box.addButton(_("Abrir a lista"), QMessageBox.AcceptRole)
         b_done = box.addButton(_("Já apaguei no Google"), QMessageBox.DestructiveRole)
         box.addButton(_("Fechar"), QMessageBox.RejectRole)

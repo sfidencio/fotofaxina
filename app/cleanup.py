@@ -14,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 
 from . import db
+from .scanner import is_better
 from .config import APP_DIR, CATEGORIES
 from .i18n import _
 
@@ -76,7 +77,8 @@ def mark_identical_duplicates(conn) -> int:
 
 def _marked(conn) -> list:
     return conn.execute(
-        "SELECT p.*, a.title AS album_title, k.path AS keeper_path, COALESCE(k.delete_mark, 0) AS keeper_marked "
+        "SELECT p.*, a.title AS album_title, k.path AS keeper_path, COALESCE(k.delete_mark, 0) AS keeper_marked, "
+        "k.width AS k_width, k.height AS k_height, k.size AS k_size "
         "FROM photos p LEFT JOIN albums a ON a.key = p.album_key LEFT JOIN photos k ON k.id = p.duplicate_of "
         "WHERE p.delete_mark=1 ORDER BY p.id").fetchall()
 
@@ -115,6 +117,11 @@ def trash_marked(conn, progress=None, stop=None, trasher=None) -> dict:
             # sempre sobra um exemplar: o original também está marcado ou não existe mais no disco
             out["falhas"].append((path, _("o original desta cópia está marcado para excluir ou não foi encontrado")))
             continue
+        if r["duplicate_of"] is not None and is_better(
+                r, {"width": r["k_width"], "height": r["k_height"], "size": r["k_size"]}):
+            # a "cópia" tem qualidade bem melhor que o original mantido: excluí-la perderia o melhor arquivo
+            out["falhas"].append((path, _("esta cópia tem qualidade melhor que o original mantido")))
+            continue
         if not os.path.exists(path):
             if os.path.isdir(os.path.dirname(path)):
                 out["ausentes"] += 1  # a pasta existe e o arquivo sumiu: alguém já o apagou
@@ -152,36 +159,70 @@ def google_pending(conn) -> list:
     return conn.execute("SELECT * FROM google_cleanup ORDER BY album_title, taken_at, name").fetchall()
 
 
+def worse_sent(conn) -> list:
+    """Versões PIORES já no Google Fotos cuja versão melhor também já foi enviada: podem ser apagadas lá."""
+    return conn.execute(
+        "SELECT k.id AS id, k.path AS path, k.taken_at, k.width, k.height, k.category, a.title AS album_title, "
+        "m.path AS better_path, m.width AS better_w, m.height AS better_h "
+        "FROM photos m JOIN photos k ON k.id = m.supersedes LEFT JOIN albums a ON a.key = k.album_key "
+        "WHERE m.media_item_id IS NOT NULL AND k.media_item_id IS NOT NULL "
+        "ORDER BY a.title, k.taken_at, k.path").fetchall()
+
+
 def clear_google_pending(conn) -> int:
-    n = conn.execute("DELETE FROM google_cleanup").rowcount
+    """O usuário já apagou tudo da lista no Google Fotos: limpa a lista e esquece as versões piores."""
+    worse = [r["id"] for r in worse_sent(conn)]
+    n = conn.execute("DELETE FROM google_cleanup").rowcount + len(worse)
+    conn.executemany("UPDATE photos SET supersedes=NULL WHERE supersedes=?", [(i,) for i in worse])
     conn.commit()
+    if worse:
+        db.forget(conn, worse)  # a próxima análise as trata como cópias da versão melhor
     return n
 
 
-def report_text(rows: list) -> str:
-    """Lista para apagar no Google Fotos, agrupada por álbum (dá para abrir o álbum e apagar em lote)."""
-    lines = [_("Itens que o FotoFaxina excluiu do HD mas que continuam no Google Fotos."),
-             _("O Google não deixa aplicativos apagarem fotos: apague-os você, em photos.google.com."),
-             _("Dica: abra o álbum, selecione os itens da lista (pela data) e use a lixeira."), ""]
+def _group_lines(rows, key, line) -> list[str]:
     groups: dict[str, list] = {}
     for r in rows:
         groups.setdefault(r["album_title"] or _("(sem álbum)"), []).append(r)
+    out = []
     for title in sorted(groups):
-        items = groups[title]
-        lines.append(_("Álbum: {album} — {n} item(ns)").format(album=title, n=len(items)))
-        for r in items:
+        out.append(_("Álbum: {album} — {n} item(ns)").format(album=title, n=len(groups[title])))
+        out += ["  - " + line(r) for r in groups[title]]
+        out.append("")
+    return out
+
+
+def report_text(rows: list, worse: list | None = None) -> str:
+    """Lista para apagar no Google Fotos, agrupada por álbum (dá para abrir o álbum e apagar em lote)."""
+    lines = [_("O Google não deixa aplicativos apagarem fotos: apague os itens abaixo você, em photos.google.com."),
+             _("Dica: abra o álbum, selecione os itens da lista (pela data) e use a lixeira."), ""]
+    if rows:
+        lines += [_("== Excluídos do HD, mas ainda no Google Fotos =="), ""]
+
+        def line(r):
             dims = f"{r['width']}x{r['height']}" if r["width"] and r["height"] else ""
             cat = _(CATEGORIES[r["category"]]) if r["category"] in CATEGORIES else ""
-            lines.append("  - " + "  ".join(x for x in (r["name"], (r["taken_at"] or "")[:19], dims, cat) if x))
-        lines.append("")
+            return "  ".join(x for x in (r["name"], (r["taken_at"] or "")[:19], dims, cat) if x)
+
+        lines += _group_lines(rows, "album_title", line)
+    if worse:
+        lines += [_("== Versões de qualidade PIOR no Google (a melhor já foi enviada) =="), ""]
+
+        def wline(r):
+            dims = f"{r['width']}x{r['height']}" if r["width"] and r["height"] else ""
+            best = f"{os.path.basename(r['better_path'])} {r['better_w']}x{r['better_h']}"
+            return "  ".join(x for x in (os.path.basename(r["path"]), (r["taken_at"] or "")[:19], dims) if x) + \
+                "  ->  " + _("manter: {melhor}").format(melhor=best)
+
+        lines += _group_lines(worse, "album_title", wline)
     return "\n".join(lines)
 
 
 def write_report(conn, path: Path | None = None) -> Path | None:
-    rows = google_pending(conn)
-    if not rows:
+    rows, worse = google_pending(conn), worse_sent(conn)
+    if not rows and not worse:
         return None
     path = path or REPORT_PATH
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(report_text(rows), encoding="utf-8")
+    path.write_text(report_text(rows, worse), encoding="utf-8")
     return path

@@ -183,6 +183,15 @@ In the **Review** tab, under **Drive cleanup**:
    FotoFaxina generates a list (by album, with name and date) under **List to delete on
    Google…**. Delete them at photos.google.com and click **I deleted them on Google**.
 
+### Better version than the one already uploaded
+
+If Google Photos already has a **worse** version of a photo (e.g. the one shrunk by WhatsApp) and
+the drive has the good original, the original is **not treated as a copy**: it shows up in Review
+with ⬆ (filter **Better than the uploaded one**), is uploaded normally, and the worse version goes
+into **List to delete on Google…** (only after the better one was uploaded). This applies to photos
+with the same aspect ratio and clearly more pixels (≥ 1.5×) or more bytes. Such a copy is also
+**never** deleted by “Delete marked”.
+
 ## History (forgetting records)
 
 FotoFaxina remembers what it already analyzed and uploaded so nothing is repeated. To redo something:

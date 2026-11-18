@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS photos(
     error         TEXT,
     not_duplicate INTEGER DEFAULT 0, -- usuário disse "Não é duplicata": não comparar por semelhança
     album_pin     TEXT,              -- álbum escolhido pelo usuário (vale mais que o agrupamento)
-    delete_mark   INTEGER DEFAULT 0  -- usuário marcou para excluir do HD (só meme/print/documento)
+    delete_mark   INTEGER DEFAULT 0, -- usuário marcou para excluir do HD
+    supersedes    INTEGER            -- id da versão PIOR deste arquivo que já foi enviada ao Google
 );
 CREATE INDEX IF NOT EXISTS idx_photos_sha    ON photos(sha256);
 CREATE INDEX IF NOT EXISTS idx_photos_phash  ON photos(phash);
@@ -72,7 +73,7 @@ CREATE TABLE IF NOT EXISTS ignored_albums(google_id TEXT PRIMARY KEY);
 """
 
 
-SCHEMA_VERSION = 5  # suba ao mudar o esquema; a migração roda uma vez por banco
+SCHEMA_VERSION = 6  # suba ao mudar o esquema; a migração roda uma vez por banco
 _ready: set[str] = set()
 
 
@@ -106,6 +107,8 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE photos ADD COLUMN album_pin TEXT")
     if "delete_mark" not in pcols:
         conn.execute("ALTER TABLE photos ADD COLUMN delete_mark INTEGER DEFAULT 0")
+    if "supersedes" not in pcols:
+        conn.execute("ALTER TABLE photos ADD COLUMN supersedes INTEGER")
     acols = {r["name"] for r in conn.execute("PRAGMA table_info(albums)")}
     if "google_items" not in acols:
         conn.execute("ALTER TABLE albums ADD COLUMN google_items INTEGER")

@@ -387,10 +387,6 @@ EN: dict[str, str] = {
     # limpeza do HD (lixeira)
     'O módulo send2trash não está instalado. Instale com: pip install send2trash (ou: pip install -r requirements.txt) e abra o FotoFaxina de novo.':
         'The send2trash module is not installed. Install it with: pip install send2trash (or: pip install -r requirements.txt) and reopen FotoFaxina.',
-    'Itens que o FotoFaxina excluiu do HD mas que continuam no Google Fotos.':
-        'Items FotoFaxina deleted from the drive that are still in Google Photos.',
-    'O Google não deixa aplicativos apagarem fotos: apague-os você, em photos.google.com.':
-        'Google does not let apps delete photos: delete them yourself at photos.google.com.',
     'Dica: abra o álbum, selecione os itens da lista (pela data) e use a lixeira.':
         'Tip: open the album, select the items on the list (by date) and use the trash.',
     'Álbum: {album} — {n} item(ns)':
@@ -437,10 +433,6 @@ EN: dict[str, str] = {
         '{n} file(s) sent to the trash ({mb:.1f} MB).',
     'Parado: o restante continua marcado.':
         'Stopped: the rest stays marked.',
-    'Nada pendente: não há itens excluídos do HD que ainda estejam no Google Fotos.':
-        'Nothing pending: no items deleted from the drive are still in Google Photos.',
-    '{n} item(ns) excluídos do HD ainda estão no Google Fotos. Abra a lista, apague-os em photos.google.com e depois clique em “Já apaguei”.':
-        '{n} item(s) deleted from the drive are still in Google Photos. Open the list, delete them at photos.google.com and then click “I deleted them on Google”.',
     'Marcada para excluir do HD':
         'Marked for deletion from the drive',
     '{n} deles já estão no Google Fotos. O Google não deixa aplicativos apagarem fotos: o FotoFaxina vai gerar uma lista para você apagar lá.':
@@ -497,4 +489,24 @@ EN: dict[str, str] = {
         'Mark whatever you want to delete, from any category. Nothing is deleted until you use “Delete marked from drive…”.',
     'ATENÇÃO: {n} deles são fotos pessoais, paisagens ou vídeos. Confira antes de confirmar.':
         'WARNING: {n} of them are personal photos, landscapes or videos. Check before confirming.',
+    'Nada pendente: não há itens para apagar no Google Fotos.':
+        'Nothing pending: there are no items to delete in Google Photos.',
+    '{n} item(ns) para apagar no Google Fotos (excluídos do HD ou versões de qualidade pior, cuja versão melhor já foi enviada). Abra a lista, apague-os em photos.google.com e depois clique em “Já apaguei”.':
+        '{n} item(s) to delete in Google Photos (deleted from the drive, or lower-quality versions whose better version was already uploaded). Open the list, delete them at photos.google.com and then click “I deleted them”.',
+    'O Google não deixa aplicativos apagarem fotos: apague os itens abaixo você, em photos.google.com.':
+        'Google does not let apps delete photos: delete the items below yourself at photos.google.com.',
+    '== Excluídos do HD, mas ainda no Google Fotos ==':
+        '== Deleted from the drive but still in Google Photos ==',
+    '== Versões de qualidade PIOR no Google (a melhor já foi enviada) ==':
+        '== LOWER-quality versions on Google (the better one was already uploaded) ==',
+    'manter: {melhor}':
+        'keep: {melhor}',
+    'Melhor que a enviada':
+        'Better than the uploaded one',
+    'Qualidade MELHOR que a versão já enviada ao Google: {arquivo}':
+        'BETTER quality than the version already uploaded to Google: {arquivo}',
+    'Esta será enviada; depois apague a versão pior no Google (veja a lista).':
+        'This one will be uploaded; afterwards delete the worse version on Google (see the list).',
+    'esta cópia tem qualidade melhor que o original mantido':
+        'this copy has better quality than the kept original',
 }

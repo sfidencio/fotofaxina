@@ -311,6 +311,16 @@ def _keeper_score(r) -> tuple:
     )
 
 
+def is_better(m, k) -> bool:
+    """m é claramente de qualidade MELHOR que k (mesma foto): bem mais pixels, ou o mesmo tamanho em
+    pixels com bem mais bytes. Ex.: o original da câmera x a versão reduzida do WhatsApp."""
+    mw, mh, kw, kh = (m["width"] or 0), (m["height"] or 0), (k["width"] or 0), (k["height"] or 0)
+    if not (mw and mh and kw and kh) or abs(mw / mh - kw / kh) / (kw / kh) > 0.05:
+        return False
+    ma, ka = mw * mh, kw * kh
+    return ma >= 1.5 * ka or (ma >= 0.95 * ka and (m["size"] or 0) >= 1.5 * (k["size"] or 1))
+
+
 def same_shot(a, b) -> bool:
     """Hash perceptual igual não basta para dizer que é a mesma foto: fotos em sequência (rajada,
     HDR, a luz mudando entre um clique e outro) dão o mesmo hash e são fotos DIFERENTES. Quando as
@@ -323,7 +333,7 @@ def same_shot(a, b) -> bool:
 
 def mark_duplicates(conn) -> int:
     """Duplicata exata (mesmo SHA-256) ou quase-duplicata (mesmo hash perceptual e mesma foto)."""
-    conn.execute("UPDATE photos SET duplicate_of=NULL WHERE media_item_id IS NULL")
+    conn.execute("UPDATE photos SET duplicate_of=NULL, supersedes=NULL WHERE media_item_id IS NULL")
     rows = conn.execute(
         "SELECT id, path, sha256, phash, width, height, size, source, media_item_id, is_video, "
         "taken_at, date_source, camera, not_duplicate FROM photos"
@@ -337,12 +347,23 @@ def mark_duplicates(conn) -> int:
             members.sort(key=_keeper_score, reverse=True)
             keepers: list = []
             for m in members:
-                keeper = next((k for k in keepers if check is None or check(k, m)), None)
-                if keeper is None:
+                matching = [k for k in keepers if check is None or check(k, m)]
+                if not matching:
                     keepers.append(m)  # outra foto: fica (e pode ser o original de outras cópias)
                     continue
                 if m["media_item_id"]:
                     continue
+                keeper = matching[0]
+                if keeper["media_item_id"]:
+                    # o "original" já está no Google. Se esta cópia é bem MELHOR, ela não é descartada:
+                    # vai ser enviada, e a versão pior fica na lista para você apagar no Google
+                    promoted = next((k for k in matching if not k["media_item_id"]), None)
+                    if promoted is not None:
+                        keeper = promoted  # outra cópia igual já foi promovida: esta é cópia dela
+                    elif is_better(m, keeper):
+                        conn.execute("UPDATE photos SET supersedes=? WHERE id=?", (keeper["id"], m["id"]))
+                        keepers.append(m)
+                        continue
                 conn.execute("UPDATE photos SET duplicate_of=? WHERE id=?", (keeper["id"], m["id"]))
                 dup_ids.add(m["id"])
                 n += 1
