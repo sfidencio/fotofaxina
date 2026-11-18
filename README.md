@@ -38,6 +38,8 @@ O zip não tem executável próprio: traz o **Python oficial do python.org** (as
 Software Foundation, por isso os antivírus não reclamam) e o código-fonte do FotoFaxina.
 5. No primeiro uso o FotoFaxina oferece conectar sua conta Google. Depois: escolha a pasta → **Analisar**.
 
+O FotoFaxina **lembra o último HD/pasta** escolhido: ao reabrir, a origem já aparece na tela Início. Se o HD voltar com outra letra, ele é reconhecido pelo nome.
+
 Para atualizar, extraia a versão nova por cima. O histórico e o login ficam em
 `C:\Users\<você>\.fotofaxina` e são mantidos.
 

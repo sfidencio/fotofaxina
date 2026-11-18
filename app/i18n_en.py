@@ -493,4 +493,8 @@ EN: dict[str, str] = {
         'File not found',
     'Não encontrei {arquivo}. O HD está plugado?':
         'Could not find {arquivo}. Is the drive plugged in?',
+    '(não encontrada: o HD está plugado?)':
+        '(not found: is the drive plugged in?)',
+    'Última origem lembrada: {caminho}':
+        'Last source remembered: {caminho}',
 }

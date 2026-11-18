@@ -39,6 +39,8 @@ The zip has no custom executable: it ships the **official Python from python.org
 Software Foundation, so antivirus software doesn't complain) plus FotoFaxina's source code.
 5. On first launch FotoFaxina offers to connect your Google account. Then: choose the folder → **Analyze**.
 
+FotoFaxina **remembers the last drive/folder** you chose: when reopened, the source is already shown on the Home screen. If the drive comes back under another letter, it is recognized by its name.
+
 To update, extract the new version over the old one. History and sign-in live in
 `C:\Users\<you>\.fotofaxina` and are kept.
 

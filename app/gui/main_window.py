@@ -92,6 +92,7 @@ class MainWindow(QMainWindow):
 
         self.refresh_summary()
         self.inicio.log(_("Pronto. Plugue um HD ou escolha uma pasta."))
+        self.restore_root()
         if not cfg.welcome_done:
             QTimer.singleShot(400, self.welcome)
 
@@ -139,9 +140,20 @@ class MainWindow(QMainWindow):
         self.inicio.account_lbl.setText(conn_txt)
         self.config_tab.refresh_account()
 
-    def set_root(self, path: str, label: str | None = None):
+    def set_root(self, path: str, label: str | None = None, remember: bool = True):
         self.root = path
-        self.inicio.source_lbl.setText(_("Origem: <b>{nome}</b> — {caminho}").format(nome=label or path, caminho=path))
+        text = _("Origem: <b>{nome}</b> — {caminho}").format(nome=label or path, caminho=path)
+        if not os.path.exists(path):
+            text += " " + _("(não encontrada: o HD está plugado?)")
+        self.inicio.source_lbl.setText(text)
+        if remember and (self.cfg.last_root != path or self.cfg.last_root_label != (label or "")):
+            self.cfg.last_root, self.cfg.last_root_label = path, label or ""
+            self.cfg.save()  # lembra o último HD/pasta para a próxima vez que o programa abrir
+
+    def restore_root(self):
+        if self.cfg.last_root:
+            self.set_root(self.cfg.last_root, self.cfg.last_root_label or None, remember=False)
+            self.inicio.log(_("Última origem lembrada: {caminho}").format(caminho=self.cfg.last_root))
 
     def _tab_changed(self, idx: int):
         w = self.tabs.widget(idx)
@@ -356,6 +368,9 @@ class MainWindow(QMainWindow):
             self.pending_drive = (mountpoint, label)
             self.notify(_("HD detectado"), _("{nome} — será analisado quando a tarefa atual terminar.").format(nome=label))
             return
+        if (self.cfg.last_root_label and label == self.cfg.last_root_label and self.root
+                and not os.path.exists(self.root) and not self.cfg.auto_scan_on_drive):
+            self.set_root(mountpoint, label)  # o HD lembrado voltou (talvez em outra letra/ponto de montagem)
         if self.cfg.auto_scan_on_drive:
             self.set_root(mountpoint, label)
             self.notify(_("HD detectado"), _("Analisando {nome}…").format(nome=label))

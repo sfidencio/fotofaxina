@@ -62,6 +62,8 @@ class Config:
     auto_scan_on_drive: bool = False       # analisa sozinho quando um HD é plugado
     auto_upload: bool = False              # envia sozinho após a análise (sem revisão)
     welcome_done: bool = False             # já mostrou a tela de boas-vindas
+    last_root: str = ""                    # última pasta/HD escolhido (lembrado ao reabrir)
+    last_root_label: str = ""              # nome do HD (para reconhecer quando ele voltar em outra letra)
     min_image_side: int = 200              # imagens menores que isso viram "outro"
     ignore_dirs: list = field(default_factory=lambda: [
         "$RECYCLE.BIN", "System Volume Information", "RECYCLER", ".Trash", ".Trashes",
