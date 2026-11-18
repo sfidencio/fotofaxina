@@ -25,6 +25,16 @@ def _trash(path: str) -> None:
     send2trash(path)
 
 
+def trash_error() -> str | None:
+    """None se a lixeira do sistema pode ser usada; senão, o motivo (ex.: módulo não instalado)."""
+    try:
+        import send2trash  # noqa: F401
+    except ImportError:
+        return _("O módulo send2trash não está instalado. Instale com: pip install send2trash "
+                 "(ou: pip install -r requirements.txt) e abra o FotoFaxina de novo.")
+    return None
+
+
 def mark(conn, ids: list[int], flag: bool = True) -> int:
     """Marca (ou desmarca) para excluir. Só aceita as categorias de DELETABLE.
     Retorna quantos itens mudaram."""
@@ -55,7 +65,12 @@ def preview(conn) -> dict:
 def trash_marked(conn, progress=None, stop=None, trasher=None) -> dict:
     """Manda os itens marcados para a lixeira. Só tira do banco o que realmente foi para a lixeira
     (ou já não existia). Retorna contagens e as falhas."""
-    trasher = trasher or _trash
+    if trasher is None:
+        trasher = _trash
+        erro = trash_error()
+        if erro:  # sem a lixeira, não adianta tentar arquivo por arquivo
+            return {"lixeira": 0, "bytes": 0, "no_google": 0, "ausentes": 0, "falhas": [],
+                    "nao_encontrados": [], "parado": False, "erro": erro}
     progress = progress or (lambda *a: None)
     rows = _marked(conn)
     out = {"lixeira": 0, "bytes": 0, "no_google": 0, "ausentes": 0, "falhas": [], "nao_encontrados": [],

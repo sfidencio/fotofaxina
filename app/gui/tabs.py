@@ -571,6 +571,10 @@ class RevisaoTab(QWidget):
         conn = db.connect()
         pv = cleanup.preview(conn)
         conn.close()
+        erro = cleanup.trash_error()
+        if erro:
+            QMessageBox.warning(self, _("Excluir marcadas"), erro)
+            return
         if not pv["n"]:
             QMessageBox.information(self, _("Excluir marcadas"), _("Nenhum item marcado para excluir."))
             return

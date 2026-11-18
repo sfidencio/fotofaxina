@@ -138,6 +138,22 @@ def main():
     assert res["lixeira"] == 0 and len(res["falhas"]) == 1, res
     assert (hd / "Prints" / "Screenshot_20220302-101010.png").exists()
 
+    # sem o módulo da lixeira: avisa uma vez, sem tentar arquivo por arquivo
+    import builtins
+    real = builtins.__import__
+
+    def sem_send2trash(name, *a, **k):
+        if name == "send2trash":
+            raise ImportError(name)
+        return real(name, *a, **k)
+
+    builtins.__import__ = sem_send2trash
+    try:
+        res = cleanup.trash_marked(conn)
+    finally:
+        builtins.__import__ = real
+    assert res.get("erro") and res["lixeira"] == 0 and not res["falhas"], res
+
     # "Já apaguei no Google" limpa a lista
     assert cleanup.clear_google_pending(conn) == 2
     assert cleanup.write_report(conn) is None

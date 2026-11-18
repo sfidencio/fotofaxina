@@ -385,6 +385,8 @@ EN: dict[str, str] = {
         '<h3>Welcome to FotoFaxina!</h3><p>1. Connect your Google Photos account.<br>2. Choose the folder or drive and click <b>Analyze</b>.<br>3. Review the result and click <b>Upload to Google Photos</b>.</p><p>The app stays next to the Windows clock. To analyze automatically when a drive is plugged in, turn it on in Settings.</p>',
 
     # limpeza do HD (lixeira)
+    'O módulo send2trash não está instalado. Instale com: pip install send2trash (ou: pip install -r requirements.txt) e abra o FotoFaxina de novo.':
+        'The send2trash module is not installed. Install it with: pip install send2trash (or: pip install -r requirements.txt) and reopen FotoFaxina.',
     'Itens que o FotoFaxina excluiu do HD mas que continuam no Google Fotos.':
         'Items FotoFaxina deleted from the drive that are still in Google Photos.',
     'O Google não deixa aplicativos apagarem fotos: apague-os você, em photos.google.com.':
