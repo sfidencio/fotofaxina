@@ -186,7 +186,7 @@ In the **Review** tab, under **Drive cleanup**:
 ### Drive trash (read and restore)
 
 The **Drive trash** tab (Linux) reads the trash of external drives (`.Trash-UID`) and of your home
-folder, shows name, original folder, deletion date and size (with an image preview) and
+folder, shows name, original folder, deletion date and size (with an **image or video preview beside the list**, in a resizable pane; video plays right there, or in the system player if Qt Multimedia is not installed) and
 **restores to the original place** the selected items or all filtered ones (by text, deletion date
 or “photos and videos only”). It **only reads and restores**: it never deletes anything from the
 trash, never overwrites a file that already exists at the destination and only touches files

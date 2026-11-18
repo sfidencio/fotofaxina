@@ -579,4 +579,14 @@ EN: dict[str, str] = {
         'Reading the trash… {d}/{t}',
     '{n} item(ns) selecionado(s).':
         '{n} item(s) selected.',
+    'Reproduzir':
+        'Play',
+    'Pausar':
+        'Pause',
+    'Abrir no programa do sistema':
+        'Open in the system program',
+    'Abre o arquivo (direto da lixeira) no visualizador ou player padrão.':
+        'Opens the file (straight from the trash) in the default viewer or player.',
+    '(vídeo: use “Abrir no programa do sistema”)':
+        '(video: use “Open in the system program”)',
 }

@@ -101,6 +101,22 @@ def main():
     tab.table.selectRow(0)
     app.processEvents()
     assert tab.preview.pixmap() is not None and not tab.preview.pixmap().isNull(), "prévia da imagem"
+    # vídeo: abre o painel de vídeo (se houver Qt Multimedia) ou avisa para usar o player do sistema
+    jogar(t2, "v.mp4", "Antigas/v.mp4", data="2026-11-16T08:00:00", conteudo=b"\x00" * 64)
+    tab.reload()
+    for _ in range(250):
+        app.processEvents()
+        if len(tab.model.items) == 3:
+            break
+        time.sleep(0.02)
+    tab.search.setText("v.mp4")
+    tab.table.selectRow(0)
+    app.processEvents()
+    assert tab.stack.currentIndex() == (1 if trash_tab.HAS_VIDEO else 0)
+    tab.search.setText("c.jpg")
+    tab.table.selectRow(0)
+    app.processEvents()
+    assert tab.stack.currentIndex() == 0 and not tab.preview.pixmap().isNull()
     tab._restore_selected()
     assert (hd2 / "Antigas" / "c.jpg").exists() and not (t2 / "files" / "c.jpg").exists()
     assert (t2 / "files" / "d.txt").exists()

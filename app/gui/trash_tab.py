@@ -6,16 +6,25 @@ import os
 
 from PIL import Image, ImageOps
 from PySide6.QtCore import (QAbstractTableModel, QModelIndex, QObject, QRunnable, QSortFilterProxyModel, Qt,
-                            QThreadPool, Signal, Slot)
-from PySide6.QtGui import QImage, QPixmap
+                            QThreadPool, QUrl, Signal, Slot)
+from PySide6.QtGui import QDesktopServices, QImage, QPixmap
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QHBoxLayout, QLabel,
-                               QLineEdit, QMessageBox, QProgressDialog, QPushButton, QTableView, QVBoxLayout,
-                               QWidget)
+                               QLineEdit, QMessageBox, QProgressDialog, QPushButton, QSlider, QSplitter,
+                               QStackedWidget, QTableView, QVBoxLayout, QWidget)
 
 from .. import trash
 from ..i18n import _
 from .icons import set_icon
 from .tabs import reveal_in_folder
+
+try:  # o Qt Multimedia vem no PySide6-Addons (o pacote do Windows leva só o essencial)
+    from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
+    from PySide6.QtMultimediaWidgets import QVideoWidget
+    HAS_VIDEO = True
+except ImportError:
+    HAS_VIDEO = False
+
+VIDEO_EXT = (".mp4", ".mov", ".3gp", ".avi", ".mkv", ".m4v")
 
 
 def human(n: int) -> str:
@@ -157,12 +166,51 @@ class LixeiraTab(QWidget):
 
         self.preview = QLabel(_("Selecione um item para ver a prévia."))
         self.preview.setAlignment(Qt.AlignCenter)
-        self.preview.setFixedWidth(280)
         self.preview.setWordWrap(True)
+        self.preview.setMinimumSize(200, 200)
         self.preview.setStyleSheet("color: gray")
+        self._img: QImage | None = None
+        self.stack = QStackedWidget()
+        self.stack.addWidget(self.preview)  # página 0: imagem/texto
+        self.player = None
+        if HAS_VIDEO:
+            self.video = QVideoWidget()
+            self.player = QMediaPlayer(self)
+            self.player.setAudioOutput(QAudioOutput(self))
+            self.player.setVideoOutput(self.video)
+            self.btn_play = QPushButton(_("Reproduzir"))
+            self.btn_play.clicked.connect(self._toggle_play)
+            self.seek = QSlider(Qt.Horizontal)
+            self.seek.sliderMoved.connect(lambda v: self.player.setPosition(v))
+            self.player.durationChanged.connect(lambda d: self.seek.setRange(0, d))
+            self.player.positionChanged.connect(lambda p: None if self.seek.isSliderDown() else self.seek.setValue(p))
+            self.player.playbackStateChanged.connect(
+                lambda st: self.btn_play.setText(_("Pausar") if st == QMediaPlayer.PlayingState else _("Reproduzir")))
+            ctl = QHBoxLayout()
+            ctl.addWidget(self.btn_play)
+            ctl.addWidget(self.seek, 1)
+            page = QWidget()
+            pl = QVBoxLayout(page)
+            pl.setContentsMargins(0, 0, 0, 0)
+            pl.addWidget(self.video, 1)
+            pl.addLayout(ctl)
+            self.stack.addWidget(page)  # página 1: vídeo
+        self.btn_open = QPushButton(_("Abrir no programa do sistema"))
+        self.btn_open.setToolTip(_("Abre o arquivo (direto da lixeira) no visualizador ou player padrão."))
+        self.btn_open.clicked.connect(self._open_external)
+        side = QWidget()
+        sl = QVBoxLayout(side)
+        sl.setContentsMargins(0, 0, 0, 0)
+        sl.addWidget(self.stack, 1)
+        sl.addWidget(self.btn_open)
+        self.splitter = QSplitter(Qt.Horizontal)
+        self.splitter.addWidget(self.table)
+        self.splitter.addWidget(side)
+        self.splitter.setStretchFactor(0, 3)
+        self.splitter.setStretchFactor(1, 2)
+        self.splitter.splitterMoved.connect(lambda *_a: self._render())
         body = QHBoxLayout()
-        body.addWidget(self.table, 1)
-        body.addWidget(self.preview)
+        body.addWidget(self.splitter, 1)
 
         self.count_lbl = QLabel()
         self.btn_restore = QPushButton(_("Restaurar selecionados"))
@@ -266,6 +314,9 @@ class LixeiraTab(QWidget):
 
     def _selection(self, *_args):
         sel = self._selected()
+        self._stop_video()
+        self._img = None
+        self.stack.setCurrentIndex(0)
         if len(sel) != 1:
             self.preview.setPixmap(QPixmap())
             self.preview.setText(_("{n} item(ns) selecionado(s).").format(n=len(sel)) if sel
@@ -273,18 +324,55 @@ class LixeiraTab(QWidget):
             return
         it, tr = sel[0], self._current()
         path = str(tr["dir"] / "files" / it["name"])
+        self.preview.setPixmap(QPixmap())
         self.preview.setText(it["orig"])
-        if it["is_dir"] or not it["media"] or os.path.splitext(it["name"])[1].lower() in (".mp4", ".mov", ".3gp", ".avi", ".mkv", ".m4v"):
+        if it["is_dir"] or not it["media"]:
+            return
+        if it["name"].lower().endswith(VIDEO_EXT):
+            if self.player is not None:
+                self.stack.setCurrentIndex(1)
+                self.player.setSource(QUrl.fromLocalFile(path))
+                self.player.pause()  # mostra o primeiro quadro; o usuário aperta Reproduzir
+            else:
+                self.preview.setText(it["orig"] + "\n\n" + _("(vídeo: use “Abrir no programa do sistema”)"))
             return
         try:
             with Image.open(path) as im:
-                im.draft("RGB", (560, 560))
+                im.draft("RGB", (1400, 1400))
                 im = ImageOps.exif_transpose(im).convert("RGB")
-                im.thumbnail((270, 270))
-                qimg = QImage(im.tobytes(), im.width, im.height, im.width * 3, QImage.Format_RGB888).copy()
-            self.preview.setPixmap(QPixmap.fromImage(qimg))
+                im.thumbnail((1400, 1400))
+                self._img = QImage(im.tobytes(), im.width, im.height, im.width * 3, QImage.Format_RGB888).copy()
+            self._render()
         except Exception:
             self.preview.setText(it["orig"] + "\n\n" + _("(sem prévia)"))
+
+    def _render(self):
+        """Ajusta a imagem ao tamanho atual do painel (que o usuário pode arrastar)."""
+        if self._img is not None and self.stack.currentIndex() == 0:
+            self.preview.setPixmap(QPixmap.fromImage(self._img).scaled(
+                max(self.preview.width() - 8, 100), max(self.preview.height() - 8, 100),
+                Qt.KeepAspectRatio, Qt.SmoothTransformation))
+
+    def resizeEvent(self, ev):
+        super().resizeEvent(ev)
+        self._render()
+
+    def _stop_video(self):
+        if self.player is not None:
+            self.player.stop()
+            self.player.setSource(QUrl())
+
+    def _toggle_play(self):
+        if self.player.playbackState() == QMediaPlayer.PlayingState:
+            self.player.pause()
+        else:
+            self.player.play()
+
+    def _open_external(self):
+        sel = self._selected()
+        tr = self._current()
+        if len(sel) == 1 and tr is not None:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(tr["dir"] / "files" / sel[0]["name"])))
 
     def _show_folder(self):
         sel = self._selected()

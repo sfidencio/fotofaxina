@@ -189,7 +189,7 @@ Na aba **Revisão**, em **Limpeza do HD**:
 ### Lixeira do HD (ler e restaurar)
 
 A aba **Lixeira do HD** (Linux) lê a lixeira dos HDs externos (`.Trash-UID`) e a da sua pasta
-pessoal, mostra nome, pasta original, data da exclusão e tamanho (com prévia da imagem) e
+pessoal, mostra nome, pasta original, data da exclusão e tamanho (com **prévia da imagem ou do vídeo ao lado**, em painel redimensionável; o vídeo toca ali mesmo, ou no player do sistema se o Qt Multimedia não estiver instalado) e
 **restaura para o lugar original** os itens selecionados ou todos os filtrados (por texto, data
 de exclusão ou “só fotos e vídeos”). Ela **só lê e restaura**: não apaga nada da lixeira, nunca
 sobrescreve um arquivo que já exista no destino e só mexe dentro do HD. Depois de restaurar,
