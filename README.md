@@ -176,6 +176,7 @@ Na aba **Revisão**, em **Limpeza do HD**:
    memes/figurinhas, prints, documentos e **cópias (duplicatas)** podem ser marcados; fotos, paisagens e vídeos, nunca.
    **Marcar todas as cópias idênticas** marca de uma vez as cópias iguais ao original. O original nunca é excluído: se ele também estiver marcado ou não existir mais no disco, a cópia fica.
    Marcar não apaga nada, e o item marcado deixa de ser enviado ao Google Fotos.
+   Para conferir antes, clique com o **botão direito** num item: **Mostrar a pasta do ORIGINAL** e **Mostrar a pasta desta CÓPIA** abrem o gerenciador de arquivos com o arquivo selecionado.
 2. **Excluir marcadas do HD…** mostra quantos arquivos e quantos MB, e pede confirmação. Só o que
    está marcado vai para a **lixeira do sistema** (dá para restaurar de lá). Nada é apagado de vez.
    Se algo falhar ou o HD não estiver plugado, o item continua marcado.

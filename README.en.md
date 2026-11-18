@@ -173,6 +173,7 @@ In the **Review** tab, under **Drive cleanup**:
    screenshots, documents and **copies (duplicates)** can be marked; photos, landscapes and videos never can.
    **Mark all identical copies** marks every copy identical to its original at once. The original is never deleted: if it is also marked or no longer on disk, the copy stays. Marking
    deletes nothing, and a marked item is no longer uploaded to Google Photos.
+   To double-check first, **right-click** an item: **Show the ORIGINAL’s folder** and **Show this COPY’s folder** open the file manager with the file selected.
 2. **Delete marked from drive…** shows how many files and MB, and asks for confirmation. Only what
    is marked goes to the **system trash** (you can restore it from there). Nothing is permanently
    deleted. If something fails or the drive is unplugged, the item stays marked.

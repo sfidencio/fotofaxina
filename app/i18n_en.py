@@ -135,8 +135,8 @@ EN: dict[str, str] = {
     "Não enviar": "Don't upload",
     "Voltar ao automático": "Back to automatic",
     "Mudar categoria": "Change category",
-    "Dica: Ctrl/Shift para selecionar várias. Duplo clique abre o arquivo.":
-        "Tip: Ctrl/Shift to select several. Double-click opens the file.",
+    "Dica: Ctrl/Shift para selecionar várias. Duplo clique abre o arquivo. Botão direito mostra a pasta do original e da cópia.":
+        "Tip: Ctrl/Shift to select several. Double-click opens the file. Right-click shows the folder of the original and of the copy.",
     "Origem: {origem}": "Source: {origem}",
     "Data: {data} ({fonte})": "Date: {data} ({fonte})",
     "Câmera: {camera}": "Camera: {camera}",
@@ -479,4 +479,18 @@ EN: dict[str, str] = {
         'the original of this copy is not in the history',
     'o original desta cópia está marcado para excluir ou não foi encontrado':
         'the original of this copy is marked for deletion or was not found',
+    'Mostrar a pasta do ORIGINAL (que será mantido)':
+        'Show the ORIGINAL’s folder (it will be kept)',
+    'Mostrar a pasta desta CÓPIA':
+        'Show this COPY’s folder',
+    'Abrir o original':
+        'Open the original',
+    'Mostrar a pasta do arquivo':
+        'Show the file’s folder',
+    'Abrir este arquivo':
+        'Open this file',
+    'Arquivo não encontrado':
+        'File not found',
+    'Não encontrei {arquivo}. O HD está plugado?':
+        'Could not find {arquivo}. Is the drive plugged in?',
 }

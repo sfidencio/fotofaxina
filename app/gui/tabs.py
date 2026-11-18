@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import os
+import shutil
+import subprocess
+import sys
 from datetime import datetime
 
 from PySide6.QtCore import QSize, Qt, QThreadPool, QUrl, Signal
@@ -9,7 +12,7 @@ from PySide6.QtGui import QDesktopServices, QIcon, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox,
     QFileDialog, QFormLayout, QGroupBox, QHBoxLayout, QHeaderView, QInputDialog, QLabel, QLineEdit,
-    QListWidget, QListWidgetItem, QMessageBox, QPlainTextEdit, QProgressBar, QProgressDialog, QPushButton, QSpinBox, QStyle,
+    QListWidget, QListWidgetItem, QMenu, QMessageBox, QPlainTextEdit, QProgressBar, QProgressDialog, QPushButton, QSpinBox, QStyle,
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -25,6 +28,33 @@ REPO = "https://github.com/sfidencio/fotofaxina/blob/master/"
 
 def cat_label(key: str | None) -> str:
     return _(CATEGORIES[key]) if key in CATEGORIES else "—"
+
+
+def reveal_in_folder(path: str) -> bool:
+    """Abre a pasta do arquivo no gerenciador de arquivos, com o arquivo selecionado quando dá."""
+    if not os.path.exists(path):
+        folder = os.path.dirname(path)
+        if not os.path.isdir(folder):
+            return False
+        return QDesktopServices.openUrl(QUrl.fromLocalFile(folder))
+    try:
+        if sys.platform.startswith("win"):
+            subprocess.Popen(["explorer", "/select,", os.path.normpath(path)])
+            return True
+        if sys.platform == "darwin":
+            subprocess.Popen(["open", "-R", path])
+            return True
+        if shutil.which("dbus-send"):  # Linux: gerenciadores que seguem o padrão FileManager1 (GNOME, KDE, XFCE…)
+            r = subprocess.run(
+                ["dbus-send", "--session", "--print-reply", "--dest=org.freedesktop.FileManager1",
+                 "/org/freedesktop/FileManager1", "org.freedesktop.FileManager1.ShowItems",
+                 f"array:string:{QUrl.fromLocalFile(path).toString()}", "string:"],
+                capture_output=True, timeout=5)
+            if r.returncode == 0:
+                return True
+    except Exception:
+        pass
+    return QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.dirname(path)))
 
 
 def google_call(parent, fn, *args):
@@ -295,6 +325,8 @@ class RevisaoTab(QWidget):
         self.list.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.list.setWordWrap(True)
         self.list.itemDoubleClicked.connect(self._open_file)
+        self.list.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.list.customContextMenuRequested.connect(self._context_menu)
 
         self.btn_more = QPushButton(_("Carregar mais"))
         self.btn_more.clicked.connect(self._show_more)
@@ -363,7 +395,8 @@ class RevisaoTab(QWidget):
         clean.addStretch()
         clean.addWidget(btn_glist)
 
-        hint = QLabel(_("Dica: Ctrl/Shift para selecionar várias. Duplo clique abre o arquivo."))
+        hint = QLabel(_("Dica: Ctrl/Shift para selecionar várias. Duplo clique abre o arquivo. "
+                        "Botão direito mostra a pasta do original e da cópia."))
         hint.setStyleSheet("color: gray")
         lay = QVBoxLayout(self)
         lay.addLayout(top)
@@ -681,6 +714,51 @@ class RevisaoTab(QWidget):
         conn.close()
         self.reload()
         self.changed.emit()
+
+    def _context_menu(self, pos):
+        it = self.list.itemAt(pos)
+        if it is None:
+            return
+        if not it.isSelected():
+            self.list.clearSelection()
+            it.setSelected(True)
+        conn = db.connect()
+        r = conn.execute("SELECT id, path, duplicate_of FROM photos WHERE id=?", (it.data(Qt.UserRole),)).fetchone()
+        orig = None
+        if r and r["duplicate_of"] is not None:
+            orig = conn.execute("SELECT path FROM photos WHERE id=?", (r["duplicate_of"],)).fetchone()
+        conn.close()
+        if r is None:
+            return
+        menu = QMenu(self)
+        if orig is not None:
+            a_orig = menu.addAction(_("Mostrar a pasta do ORIGINAL (que será mantido)"))
+            a_this = menu.addAction(_("Mostrar a pasta desta CÓPIA"))
+            a_open_orig = menu.addAction(_("Abrir o original"))
+        else:
+            a_this = menu.addAction(_("Mostrar a pasta do arquivo"))
+            a_orig = a_open_orig = None
+        a_open = menu.addAction(_("Abrir este arquivo"))
+        chosen = menu.exec(self.list.viewport().mapToGlobal(pos))
+        if chosen is None:
+            return
+        target = None
+        if chosen is a_this:
+            target = (r["path"], True)
+        elif chosen is a_orig:
+            target = (orig["path"], True)
+        elif chosen is a_open:
+            target = (r["path"], False)
+        elif chosen is a_open_orig:
+            target = (orig["path"], False)
+        if target is None:
+            return
+        path, reveal = target
+        ok = reveal_in_folder(path) if reveal else (os.path.exists(path) and
+                                                    QDesktopServices.openUrl(QUrl.fromLocalFile(path)))
+        if not ok:
+            QMessageBox.warning(self, _("Arquivo não encontrado"),
+                                _("Não encontrei {arquivo}. O HD está plugado?").format(arquivo=path))
 
     def _open_file(self, it: QListWidgetItem):
         conn = db.connect()
