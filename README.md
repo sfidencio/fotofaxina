@@ -186,6 +186,16 @@ Na aba **Revisão**, em **Limpeza do HD**:
    lá: o FotoFaxina gera uma lista (por álbum, com nome e data) em **Lista para apagar no
    Google…**. Apague em photos.google.com e clique em **Já apaguei no Google**.
 
+### Lixeira do HD (ler e restaurar)
+
+A aba **Lixeira do HD** (Linux) lê a lixeira dos HDs externos (`.Trash-UID`) e a da sua pasta
+pessoal, mostra nome, pasta original, data da exclusão e tamanho (com prévia da imagem) e
+**restaura para o lugar original** os itens selecionados ou todos os filtrados (por texto, data
+de exclusão ou “só fotos e vídeos”). Ela **só lê e restaura**: não apaga nada da lixeira, nunca
+sobrescreve um arquivo que já exista no destino e só mexe dentro do HD. Depois de restaurar,
+clique em **Analisar** para o FotoFaxina considerar os arquivos. No Windows e no macOS, restaure
+pela Lixeira do próprio sistema.
+
 ### Versão melhor que a já enviada
 
 Se o Google Fotos já tem uma versão **pior** de uma foto (ex.: a reduzida pelo WhatsApp) e o HD tem

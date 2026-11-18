@@ -509,4 +509,74 @@ EN: dict[str, str] = {
         'This one will be uploaded; afterwards delete the worse version on Google (see the list).',
     'esta cópia tem qualidade melhor que o original mantido':
         'this copy has better quality than the kept original',
+    'Lixeira do HD':
+        'Drive trash',
+    'Aqui você vê o que está na lixeira do HD e pode restaurar para o lugar original. Esta aba só lê e restaura: ela nunca apaga nada da lixeira.':
+        'Here you can see what is in the drive’s trash and restore it to its original place. This tab only reads and restores: it never deletes anything from the trash.',
+    'Recarregar':
+        'Reload',
+    'Filtrar por nome ou pasta…':
+        'Filter by name or folder…',
+    'Só fotos e vídeos':
+        'Photos and videos only',
+    'Selecione um item para ver a prévia.':
+        'Select an item to see a preview.',
+    'Restaurar selecionados':
+        'Restore selected',
+    'Restaurar todos os filtrados…':
+        'Restore all filtered…',
+    'Mostrar pasta original':
+        'Show original folder',
+    'Lendo a lixeira…':
+        'Reading the trash…',
+    'Todas as datas':
+        'All dates',
+    'Restaurando…':
+        'Restoring…',
+    'Restaurar':
+        'Restore',
+    'Lixeira:':
+        'Trash:',
+    'Excluído em:':
+        'Deleted on:',
+    'A leitura da lixeira está disponível no Linux (padrão FreeDesktop). No Windows e no macOS, use a Lixeira do sistema para restaurar.':
+        'Reading the trash is available on Linux (FreeDesktop standard). On Windows and macOS, use the system Trash to restore.',
+    'Nenhuma lixeira encontrada (HD plugado?).':
+        'No trash found (is the drive plugged in?).',
+    '{n} item(ns) restaurados.':
+        '{n} item(s) restored.',
+    'Parado: o restante continua na lixeira.':
+        'Stopped: the rest stays in the trash.',
+    'Para o FotoFaxina considerar esses arquivos, clique em Analisar na aba Início.':
+        'For FotoFaxina to take these files into account, click Analyze on the Home tab.',
+    'Arquivo':
+        'File',
+    'Pasta original':
+        'Original folder',
+    'Excluído em':
+        'Deleted on',
+    'Tamanho':
+        'Size',
+    '{n} de {total} itens':
+        '{n} of {total} items',
+    '(pasta)':
+        '(folder)',
+    'itens':
+        'items',
+    '(sem prévia)':
+        '(no preview)',
+    'Restaurar {n} item(ns) ({mb:.1f} MB) para o lugar original?\n\nArquivos que já existirem no destino não são sobrescritos.':
+        'Restore {n} item(s) ({mb:.1f} MB) to the original place?\n\nFiles that already exist at the destination are not overwritten.',
+    '{n} já existiam no destino (não foram sobrescritos).':
+        '{n} already existed at the destination (not overwritten).',
+    '{n} não estão mais na lixeira.':
+        '{n} are no longer in the trash.',
+    '{n} falharam, por exemplo: {ex}':
+        '{n} failed, for example: {ex}',
+    'Pasta pessoal':
+        'Home folder',
+    'Lendo a lixeira… {d}/{t}':
+        'Reading the trash… {d}/{t}',
+    '{n} item(ns) selecionado(s).':
+        '{n} item(s) selected.',
 }

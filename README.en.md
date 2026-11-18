@@ -183,6 +183,16 @@ In the **Review** tab, under **Drive cleanup**:
    FotoFaxina generates a list (by album, with name and date) under **List to delete on
    Google…**. Delete them at photos.google.com and click **I deleted them on Google**.
 
+### Drive trash (read and restore)
+
+The **Drive trash** tab (Linux) reads the trash of external drives (`.Trash-UID`) and of your home
+folder, shows name, original folder, deletion date and size (with an image preview) and
+**restores to the original place** the selected items or all filtered ones (by text, deletion date
+or “photos and videos only”). It **only reads and restores**: it never deletes anything from the
+trash, never overwrites a file that already exists at the destination and only touches files
+inside the drive. After restoring, click **Analyze** so FotoFaxina takes the files into account. On
+Windows and macOS, restore from the system Trash.
+
 ### Better version than the one already uploaded
 
 If Google Photos already has a **worse** version of a photo (e.g. the one shrunk by WhatsApp) and

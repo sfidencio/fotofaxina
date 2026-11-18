@@ -18,6 +18,7 @@ from ..drive_watcher import DriveWatcher
 from ..i18n import _
 from .icons import icon as make_icon
 from .tabs import AlbunsTab, ConfigTab, InicioTab, RevisaoTab
+from .trash_tab import LixeiraTab
 from .workers import Job
 
 APP_DIR.mkdir(parents=True, exist_ok=True)
@@ -48,10 +49,12 @@ class MainWindow(QMainWindow):
         self.revisao = RevisaoTab(cfg)
         self.albuns = AlbunsTab()
         self.config_tab = ConfigTab(cfg)
+        self.lixeira = LixeiraTab()
         self.tabs = QTabWidget()
         self.tabs.addTab(self.inicio, _("Início"))
         self.tabs.addTab(self.revisao, _("Revisão"))
         self.tabs.addTab(self.albuns, _("Álbuns"))
+        self.tabs.addTab(self.lixeira, _("Lixeira do HD"))
         self.tabs.addTab(self.config_tab, _("Configurações"))
         self.tabs.currentChanged.connect(self._tab_changed)
         self.setCentralWidget(self.tabs)
@@ -161,6 +164,8 @@ class MainWindow(QMainWindow):
             self.revisao.reload()
         elif w is self.albuns:
             self.albuns.reload()
+        elif w is self.lixeira:
+            self.lixeira.ensure_loaded()
 
     # ---------------- tarefas
     def _run(self, name: str, fn, *args) -> bool:
