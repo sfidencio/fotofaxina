@@ -127,6 +127,14 @@ def main():
 
     # fotos pessoais não podem ser marcadas; prints podem
     assert cleanup.mark(conn, fotos) == 0
+    # "outro" pode; paisagem e vídeo não
+    for cat, esperado in (("outro", 1), ("paisagem", 0), ("video", 0)):
+        conn.execute("UPDATE photos SET category=? WHERE id=?", (cat, fotos[0]))
+        conn.commit()
+        assert cleanup.mark(conn, fotos[:1]) == esperado, cat
+        cleanup.mark(conn, fotos[:1], False)
+    conn.execute("UPDATE photos SET category='foto' WHERE id=?", (fotos[0],))
+    conn.commit()
     assert cleanup.mark(conn, prints[:3]) == 3  # prints 0 e 1 (já enviados) e 2 (só no HD); o 3 não
     assert cleanup.mark(conn, [prints[1]], False) == 1  # desmarcar
     assert cleanup.mark(conn, [prints[1]]) == 1

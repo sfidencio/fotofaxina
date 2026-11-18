@@ -1,4 +1,4 @@
-"""Limpeza do HD: o usuário marca memes, prints, figurinhas e documentos e o app manda só o que foi
+"""Limpeza do HD: o usuário marca memes, prints, figurinhas, documentos e "outro" e o app manda só o que foi
 marcado para a LIXEIRA do sistema (dá para restaurar de lá). Nada é apagado de vez.
 
 O que já foi enviado ao Google Fotos NÃO pode ser apagado pelo app: a API do Google não tem essa
@@ -17,7 +17,7 @@ from . import db
 from .config import APP_DIR, CATEGORIES
 from .i18n import _
 
-DELETABLE = ("meme", "print", "documento")  # nunca fotos pessoais, paisagens, vídeos ou "outro"
+DELETABLE = ("meme", "print", "documento", "outro")  # nunca fotos pessoais, paisagens ou vídeos
 REPORT_PATH = APP_DIR / "apagar-no-google.txt"
 _MARKS = ",".join("?" * len(DELETABLE))
 

@@ -351,7 +351,7 @@ class RevisaoTab(QWidget):
         btn_forget.clicked.connect(self._forget_selected)
         self.btn_forget = btn_forget
         btn_mark = QPushButton(_("Marcar para excluir"))
-        btn_mark.setToolTip(_("Só memes, prints, figurinhas, documentos e cópias (duplicatas) podem ser marcados. Nada é "
+        btn_mark.setToolTip(_("Só memes, prints, figurinhas, documentos, “Outro” e cópias (duplicatas) podem ser marcados. Nada é "
                               "apagado até você usar “Excluir marcadas do HD…”."))
         btn_mark.clicked.connect(lambda: self._mark_delete(True))
         btn_unmark = QPushButton(_("Desmarcar"))
@@ -604,7 +604,7 @@ class RevisaoTab(QWidget):
         conn.close()
         if flag and n < len(ids):
             QMessageBox.information(self, _("Marcar para excluir"), _(
-                "{n} item(ns) marcados. {ign} ignorados: só memes, prints, figurinhas, documentos e "
+                "{n} item(ns) marcados. {ign} ignorados: só memes, prints, figurinhas, documentos, “Outro” e "
                 "cópias (duplicatas) podem ser marcados.").format(n=n, ign=len(ids) - n))
         self.reload()
         self.changed.emit()
