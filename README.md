@@ -242,6 +242,8 @@ pip install -r requirements.txt
 python main.py
 ```
 
+Linux/macOS: `./iniciar.sh` cria o `.venv`, instala as dependências (de novo sempre que `requirements.txt` mudar) e abre o app. Depois de atualizar o código (`git pull`), rode `pip install -r requirements.txt` ou use o `iniciar.sh`.
+
 Sem o modelo o app funciona só com as regras. Para ter a IA rodando pelo código, o mais fácil é
 **Configurações → Baixar modelo de IA** (ou `python main.py --baixar-ia`): baixa o modelo pronto
 da última versão (~96 MB) para `~/.fotofaxina/models`. Para gerar o modelo você mesmo:

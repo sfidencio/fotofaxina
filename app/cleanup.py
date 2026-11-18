@@ -7,6 +7,9 @@ função. Esses itens vão para uma lista (`google_cleanup`) que o usuário usa 
 from __future__ import annotations
 
 import os
+import shutil
+import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -19,9 +22,21 @@ REPORT_PATH = APP_DIR / "apagar-no-google.txt"
 _MARKS = ",".join("?" * len(DELETABLE))
 
 
-def _trash(path: str) -> None:
-    from send2trash import send2trash
+def _gio() -> str | None:
+    return shutil.which("gio") if sys.platform.startswith("linux") else None
 
+
+def _trash(path: str) -> None:
+    try:
+        from send2trash import send2trash
+    except ImportError:
+        gio = _gio()  # Linux sem o módulo: usa a lixeira do sistema (GNOME/KDE/XFCE) pelo "gio trash"
+        if not gio:
+            raise
+        r = subprocess.run([gio, "trash", "--", path], capture_output=True, text=True, timeout=120)
+        if r.returncode != 0:
+            raise OSError((r.stderr or r.stdout or "gio trash falhou").strip())
+        return
     send2trash(path)
 
 
@@ -30,6 +45,8 @@ def trash_error() -> str | None:
     try:
         import send2trash  # noqa: F401
     except ImportError:
+        if _gio():
+            return None
         return _("O módulo send2trash não está instalado. Instale com: pip install send2trash "
                  "(ou: pip install -r requirements.txt) e abra o FotoFaxina de novo.")
     return None

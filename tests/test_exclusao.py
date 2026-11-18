@@ -148,10 +148,12 @@ def main():
         return real(name, *a, **k)
 
     builtins.__import__ = sem_send2trash
+    gio_real, cleanup._gio = cleanup._gio, lambda: None  # sem o módulo e sem o "gio trash"
     try:
         res = cleanup.trash_marked(conn)
     finally:
         builtins.__import__ = real
+        cleanup._gio = gio_real
     assert res.get("erro") and res["lixeira"] == 0 and not res["falhas"], res
 
     # "Já apaguei no Google" limpa a lista

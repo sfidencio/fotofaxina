@@ -239,6 +239,8 @@ pip install -r requirements.txt
 python main.py
 ```
 
+Linux/macOS: `./iniciar.sh` creates `.venv`, installs the dependencies (again whenever `requirements.txt` changes) and opens the app. After updating the code (`git pull`), run `pip install -r requirements.txt` or use `iniciar.sh`.
+
 Without the model the app runs with rules only. The easiest way to get the AI when running from
 source is **Settings → Download AI model** (or `python main.py --baixar-ia`): it downloads the
 ready-made model from the latest release (~96 MB) into `~/.fotofaxina/models`. To build it yourself:
